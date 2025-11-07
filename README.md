@@ -113,20 +113,5 @@ spring:
 - After starting `auth-service`, it will automatically register inside the **Eureka Dashboard**.
 
 
----
 
-## ✅ Verification Checklist
 
-1️⃣ Open [http://localhost:8761](http://localhost:8761) → Ensure `auth-service` appears.  
-2️⃣ Open [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html) → Test the `login` endpoint.  
-3️⃣ Use default credentials → **username:** `admin` | **password:** `123456`.
-
----
-
-## ✨ Developer Info
-
-**Name:** Safa G.  
-**Project:** OPS (Olive Press System)  
-**Version:** 1.0  
-**Date:** November 2025  
-**Tech Stack:** Java 21 · Spring Boot 3.3.5 · PostgreSQL 15 · Docker · Eureka · Swagger
