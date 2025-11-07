@@ -1,117 +1,85 @@
-# 🫒 OPS Microservices System
+# 🫒 OPS Microservices System — How to Run Everything
 
-The **Olive Press Management System** is built using  
-**Spring Boot – Maven – Docker – PostgreSQL – Eureka Discovery – Swagger UI**
-
----
-
-## ⚙️ Project Components
-
-| Component | Description | Port |
-|------------|--------------|------|
-| 🧭 discovery-service | Eureka Server for service registry | 8761 |
-| 🔐 auth-service | Authentication service (login – tokens – users) | 8080 |
-| 🗄️ PostgreSQL | Database running in Docker | 5432 |
+This guide explains how to **run all services step-by-step** for the Olive Press Management System  
+using **Spring Boot**, **Docker**, **PostgreSQL**, **Eureka**, and **Swagger**.
 
 ---
 
-## 🚀 How to Run the Project (Step by Step)
+## ⚙️ Step-by-Step Run Instructions
 
-### 1️⃣ Run PostgreSQL (Database)
+### 🥇 Step 1 — Run PostgreSQL Database (Docker)
 
-Open **Docker Desktop** and make sure the container `postgres_aut1` is running ✅  
-If not, create and start it using:
-
+**Command:**
 ```bash
 docker run --name postgres_aut1   -e POSTGRES_USER=postgres   -e POSTGRES_PASSWORD=postgres   -e POSTGRES_DB=auth_db   -p 5432:5432   -d postgres:15
 ```
-
-> The database will be available at port **5432**.
+✅ This starts the database inside Docker on port **5432**.
 
 ---
 
-### 2️⃣ Run Eureka (Discovery Service)
+### 🥈 Step 2 — Run Eureka Discovery Service
 
-Navigate to the project folder:
-
+**Command:**
 ```bash
 cd discovery-service
 mvn spring-boot:run
 ```
+✅ This starts the **Eureka server** on port **8761**.
 
-Then open:
-
+**Check in browser:**  
 👉 [http://localhost:8761](http://localhost:8761)
-
-You should see the **Eureka Dashboard** (means the server is running).
 
 ---
 
-### 3️⃣ Run Auth Service
+### 🥉 Step 3 — Run Auth Service (Spring Boot)
 
-Go to:
-
+**Command:**
 ```bash
 cd auth-service
 mvn spring-boot:run
 ```
+✅ This starts the **Auth API** on port **8080** and automatically registers it in Eureka.
 
-After it starts, open:
-
+**Check in browser:**  
 👉 [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html)
-
-You will see **Swagger UI** with all available APIs.
 
 ---
 
-## 📡 Main Auth Service APIs
+## 📡 Auth Service API Endpoints
 
 | Method | Endpoint | Description |
 |---------|-----------|-------------|
-| POST | `/api/auth/login` | Login and return JWT Token |
+| POST | `/api/auth/login` | Login and get JWT token |
 | POST | `/api/auth/logout` | Logout user |
 | POST | `/api/auth/refresh` | Refresh access token |
-| GET  | `/api/users/profile` | Get current user profile |
-| GET  | `/api/roles` | List all roles |
-| POST | `/api/roles` | Create new role |
+| GET  | `/api/users/profile` | Get current user info |
 
 ---
 
-## 🧩 Startup Order
+## ✅ Run Order Summary
 
-| Step | Service | Port | Purpose |
-|------|----------|------|----------|
-| 1️⃣ | PostgreSQL (Docker) | 5432 | Database |
-| 2️⃣ | discovery-service | 8761 | Eureka registry |
-| 3️⃣ | auth-service | 8080 | Swagger + APIs |
-
----
-
-## 📊 Important Links
-
-| Service | URL |
-|----------|-----|
-| Eureka Dashboard | [http://localhost:8761](http://localhost:8761) |
-| Auth Swagger UI | [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html) |
-| Database | `jdbc:postgresql://localhost:5432/auth_db` |
+| Order | Service | Command | Port |
+|--------|----------|----------|------|
+| 1️⃣ | Database (PostgreSQL Docker) | `docker run ...` | 5432 |
+| 2️⃣ | Eureka Discovery Service | `cd discovery-service && mvn spring-boot:run` | 8761 |
+| 3️⃣ | Auth Service | `cd auth-service && mvn spring-boot:run` | 8080 |
 
 ---
 
-## 🧠 Notes
+## 🌐 Verify Everything
 
-- Make sure **Docker Desktop** is running before any service.  
-- If you get a database connection error, update your `application.yml` in `auth-service/src/main/resources`:
+1️⃣ Open [http://localhost:8761](http://localhost:8761) → Eureka Dashboard should list `auth-service`.  
+2️⃣ Open [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html) → Swagger UI opens.  
+3️⃣ Try login with default credentials (if DataInitializer exists):  
+**Username:** `admin` | **Password:** `123456`
 
-```yaml
-spring:
-  datasource:
-    url: jdbc:postgresql://localhost:5432/auth_db
-    username: postgres
-    password: postgres
-```
+---
 
-- After starting `auth-service`, it will automatically register inside the **Eureka Dashboard**.
+## ✨ Done!
 
+Your system is now running:
+- PostgreSQL (database)  
+- Eureka Discovery Service  
+- Auth Service (API + Swagger)
 
-
-
+Enjoy building your Olive Press Management System 🚀
