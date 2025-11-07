@@ -112,46 +112,6 @@ spring:
 
 - After starting `auth-service`, it will automatically register inside the **Eureka Dashboard**.
 
----
-
-## 🧩 (Optional) Add Default Data (DataInitializer)
-
-To insert default admin user and roles automatically, create the file:
-```
-com.project.auth_service.initializer.DataInitializer.java
-```
-
-```java
-@Component
-@RequiredArgsConstructor
-public class DataInitializer implements CommandLineRunner {
-
-    private final RoleRepository roleRepository;
-    private final AuthorityRepository authorityRepository;
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
-
-    @Override
-    public void run(String... args) {
-        if (roleRepository.count() == 0) {
-            Authority read = authorityRepository.save(new Authority("READ_PRIVILEGE"));
-            Authority write = authorityRepository.save(new Authority("WRITE_PRIVILEGE"));
-
-            Role adminRole = new Role("ADMIN");
-            adminRole.setAuthorities(List.of(read, write));
-            roleRepository.save(adminRole);
-
-            User admin = new User();
-            admin.setUsername("admin");
-            admin.setPassword(passwordEncoder.encode("123456"));
-            admin.setRole(adminRole);
-            userRepository.save(admin);
-
-            System.out.println("✅ Default admin created: admin / 123456");
-        }
-    }
-}
-```
 
 ---
 
