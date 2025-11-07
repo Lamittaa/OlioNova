@@ -1,0 +1,89 @@
+{
+  "client": "Thunder Client",
+  "collectionName": "Auth & Admin APIs",
+  "dateExported": "2025-09-24",
+  "requests": [
+    {
+      "name": "Register",
+      "method": "POST",
+      "url": "http://localhost:8080/api/auth/register",
+      "body": {
+        "type": "json",
+        "raw": {
+          "username": "newuser",
+          "password": "12345"
+        }
+      }
+    },
+    {
+      "name": "Login",
+      "method": "POST",
+      "url": "http://localhost:8080/api/auth/login",
+      "body": {
+        "type": "json",
+        "raw": {
+          "username": "admin",
+          "password": "admin"
+        }
+      }
+    },
+    {
+      "name": "Current User / Me",
+      "method": "GET",
+      "url": "http://localhost:8080/api/auth/me",
+      "auth": {
+        "type": "bearer",
+        "token": ""
+      }
+    },
+    {
+      "name": "Admin - Add Role",
+      "method": "POST",
+      "url": "http://localhost:8080/api/admin/add-role",
+      "body": {
+        "type": "json",
+        "raw": {
+          "name": "MANAGER"
+        }
+      },
+      "auth": {
+        "type": "bearer",
+        "token": ""
+      }
+    },
+    {
+      "name": "Admin - Assign Role",
+      "method": "POST",
+      "url": "http://localhost:8080/api/admin/assign-role",
+      "body": {
+        "type": "json",
+        "raw": {
+          "username": "newuser",
+          "role": "MANAGER"
+        }
+      },
+      "auth": {
+        "type": "bearer",
+        "token": ""
+      }
+    },
+    {
+      "name": "Admin - Delete User",
+      "method": "DELETE",
+      "url": "http://localhost:8080/api/admin/users/3",
+      "auth": {
+        "type": "bearer",
+        "token": ""
+      }
+    },
+    {
+      "name": "Admin - Reports",
+      "method": "GET",
+      "url": "http://localhost:8080/api/admin/reports",
+      "auth": {
+        "type": "bearer",
+        "token": ""
+      }
+    }
+  ]
+}

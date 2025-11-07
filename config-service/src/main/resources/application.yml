@@ -1,0 +1,27 @@
+server:
+  port: 8888
+
+spring:
+  application:
+    name: config-service
+
+  profiles:
+    active: native  # 🟢 هذا السطر ضروري جدًا
+
+  cloud:
+    config:
+      server:
+        native:
+          search-locations: file:./config-repo  # 🟢 مسار مجلد إعداداتك المحلي
+
+# 🚫 لا تحاولي تسجيل السيرفر مؤقتًا في Eureka
+eureka:
+  client:
+    register-with-eureka: false
+    fetch-registry: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
