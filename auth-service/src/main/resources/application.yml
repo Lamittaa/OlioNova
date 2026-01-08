@@ -1,36 +1,7 @@
 spring:
   application:
-    name: auth-service  
-  datasource:
-    url: jdbc:postgresql://localhost:5432/authdb
-    username: postgres
-    password: postgres
-    driver-class-name: org.postgresql.Driver
+    name: auth-service
+  config:
+    import: optional:configserver:http://localhost:8888
 
-  jpa:
-    hibernate:
-      ddl-auto: create-drop
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
-        format_sql: true
-    show-sql: true
 
-server:
-  port: 8080
-
-security:
-  jwt:
-    secret: "MySuperSecretKeyForJwt1234567890MyExtra"
-    access-expiration-ms: 900000
-    refresh-expiration-ms: 604800000
-
-eureka:
-  client:
-    service-url:
-      defaultZone: http://localhost:8761/eureka
-    register-with-eureka: true
-    fetch-registry: true
-  instance:
-    prefer-ip-address: true
-    instance-id: ${spring.application.name}:${server.port}

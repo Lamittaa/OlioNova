@@ -23,16 +23,25 @@ public class JwtService {
     private final long accessExpirationMs;
     private final long refreshExpirationMs;
 
+    // public JwtService(
+    //         @Value("${security.jwt.secret}") String secret,
+    //         @Value("${security.jwt.access-expiration-ms:900000}") long accessExpirationMs,     // 15m
+    //         @Value("${security.jwt.refresh-expiration-ms:604800000}") long refreshExpirationMs // 7d
+    // ) {
+    //     // ملاحظة: تأكد أن الـ secret ≥ 32 بايت (≈ 32+ حرف) لكي يدعم HS256
+    //     this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+    //     this.accessExpirationMs = accessExpirationMs;
+    //     this.refreshExpirationMs = refreshExpirationMs;
+    // }
     public JwtService(
-            @Value("${security.jwt.secret}") String secret,
-            @Value("${security.jwt.access-expiration-ms:900000}") long accessExpirationMs,     // 15m
-            @Value("${security.jwt.refresh-expiration-ms:604800000}") long refreshExpirationMs // 7d
-    ) {
-        // ملاحظة: تأكد أن الـ secret ≥ 32 بايت (≈ 32+ حرف) لكي يدعم HS256
-        this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
-        this.accessExpirationMs = accessExpirationMs;
-        this.refreshExpirationMs = refreshExpirationMs;
-    }
+        @Value("${security.jwt.secret:MySuperSecretKeyForJwt1234567890MyExtra}") String secret,
+        @Value("${security.jwt.access-expiration-ms:900000}") long accessExpirationMs,
+        @Value("${security.jwt.refresh-expiration-ms:604800000}") long refreshExpirationMs
+) {
+    this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+    this.accessExpirationMs = accessExpirationMs;
+    this.refreshExpirationMs = refreshExpirationMs;
+}
 
     // ========================
     // استخراجات Claims
