@@ -10,7 +10,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: update
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
@@ -31,7 +31,6 @@ security:
   jwt:
     secret: "MySuperSecretKeyForJwt1234567890MyExtra"
 
-# (اختياري) Swagger لكل خدمة
 springdoc:
   api-docs:
     path: /v3/api-docs

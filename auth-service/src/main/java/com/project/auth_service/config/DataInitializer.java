@@ -39,14 +39,15 @@ public class DataInitializer {
         Role admin        = getOrCreateRole("ADMIN");
         Role accountant   = getOrCreateRole("ACCOUNTANT");
         Role receptionist = getOrCreateRole("RECEPTIONIST");
+        Role technician   = getOrCreateRole("TECHNICIAN");
 
         // ===================== 2) DEFINE ALL AUTHORITIES =====================
-        // NOTE: Roles will be represented as authorities as well: ROLE_ADMIN, ROLE_ACCOUNTANT, ROLE_RECEPTIONIST
         List<String> authorityNames = List.of(
-                // Role markers (needed for hasRole('ADMIN') style)
+                // Role markers
                 "ROLE_ADMIN",
                 "ROLE_ACCOUNTANT",
                 "ROLE_RECEPTIONIST",
+                "ROLE_TECHNICIAN",
 
                 // Users & Roles management
                 "ADD_USER",
@@ -77,35 +78,71 @@ public class DataInitializer {
                 "CUSTOMER_UPDATE",
                 "CUSTOMER_DELETE",
                 "CUSTOMER_SEARCH",
-                "CUSTOMER_UPDATE_NATIONAL_ID"
+                "CUSTOMER_UPDATE_NATIONAL_ID",
+
+                // Products
+                "PRODUCT_CREATE",
+                "PRODUCT_READ",
+                "PRODUCT_UPDATE",
+                "PRODUCT_UPDATE_INVENTORY",
+                "PRODUCT_DELETE",
+
+                // Orders
+                "ORDER_CREATE",
+                "ORDER_READ",
+                "ORDER_UPDATE_STATUS",
+                "ORDER_CANCEL",
+
+                // Order Items
+                "ORDER_ITEM_READ",
+                "ORDER_ITEM_ADD",
+                "ORDER_ITEM_UPDATE",
+                "ORDER_ITEM_DELETE",
+
+                // ✅ Order Status (Lookup)
+                "ORDER_STATUS_READ"
         );
 
-        // Create them in DB (if not exist)
+        // Create authorities
         Set<Authority> allAuthorities = new LinkedHashSet<>();
         for (String name : authorityNames) {
             allAuthorities.add(getOrCreateAuthority(name));
         }
 
-        // Convenience getters
+        // Convenience
         Authority ROLE_ADMIN        = getOrCreateAuthority("ROLE_ADMIN");
         Authority ROLE_ACCOUNTANT   = getOrCreateAuthority("ROLE_ACCOUNTANT");
         Authority ROLE_RECEPTIONIST = getOrCreateAuthority("ROLE_RECEPTIONIST");
+        Authority ROLE_TECHNICIAN   = getOrCreateAuthority("ROLE_TECHNICIAN");
+
+        Authority ORDER_STATUS_READ = getOrCreateAuthority("ORDER_STATUS_READ");
 
         // ===================== 3) ASSIGN AUTHORITIES TO ROLES =====================
 
         // ADMIN => كلشي
         setAuthorities(admin, allAuthorities);
 
-        // ACCOUNTANT => تقارير + قراءة فقط (اختياري cities/customers read)
+        // ACCOUNTANT
         setAuthorities(accountant, Set.of(
                 ROLE_ACCOUNTANT,
                 getOrCreateAuthority("VIEW_PROFILE"),
                 getOrCreateAuthority("VIEW_REPORTS"),
+
                 getOrCreateAuthority("CUSTOMER_READ"),
-                getOrCreateAuthority("CITY_READ")
+                getOrCreateAuthority("CITY_READ"),
+
+                getOrCreateAuthority("PRODUCT_READ"),
+                getOrCreateAuthority("PRODUCT_UPDATE_INVENTORY"),
+
+                getOrCreateAuthority("ORDER_READ"),
+                getOrCreateAuthority("ORDER_UPDATE_STATUS"),
+                getOrCreateAuthority("ORDER_ITEM_READ"),
+
+                // ✅ Order Status lookup
+                ORDER_STATUS_READ
         ));
 
-        // RECEPTIONIST => شغل استقبال: cities + customers (بدون delete وبدون تغيير national id)
+        // RECEPTIONIST
         setAuthorities(receptionist, Set.of(
                 ROLE_RECEPTIONIST,
                 getOrCreateAuthority("VIEW_PROFILE"),
@@ -117,19 +154,46 @@ public class DataInitializer {
                 getOrCreateAuthority("CUSTOMER_CREATE"),
                 getOrCreateAuthority("CUSTOMER_READ"),
                 getOrCreateAuthority("CUSTOMER_UPDATE"),
-                getOrCreateAuthority("CUSTOMER_SEARCH")
+                getOrCreateAuthority("CUSTOMER_SEARCH"),
+
+                getOrCreateAuthority("PRODUCT_READ"),
+
+                getOrCreateAuthority("ORDER_CREATE"),
+                getOrCreateAuthority("ORDER_READ"),
+                getOrCreateAuthority("ORDER_CANCEL"),
+
+                getOrCreateAuthority("ORDER_ITEM_READ"),
+                getOrCreateAuthority("ORDER_ITEM_ADD"),
+                getOrCreateAuthority("ORDER_ITEM_UPDATE"),
+                getOrCreateAuthority("ORDER_ITEM_DELETE"),
+
+                // ✅ Order Status lookup
+                ORDER_STATUS_READ
+        ));
+
+        // TECHNICIAN
+        setAuthorities(technician, Set.of(
+                ROLE_TECHNICIAN,
+                getOrCreateAuthority("VIEW_PROFILE"),
+
+                getOrCreateAuthority("ORDER_READ"),
+                getOrCreateAuthority("ORDER_UPDATE_STATUS"),
+                getOrCreateAuthority("ORDER_ITEM_READ"),
+
+                // ✅ Order Status lookup
+                ORDER_STATUS_READ
         ));
 
         roles.save(admin);
         roles.save(accountant);
         roles.save(receptionist);
+        roles.save(technician);
 
         // ===================== 4) CREATE USERS =====================
-        // usernames / passwords:
-        // admin/admin , acc/acc , reception/reception
         getOrCreateUser("admin", encoder.encode("admin"), admin);
         getOrCreateUser("acc", encoder.encode("acc"), accountant);
         getOrCreateUser("reception", encoder.encode("reception"), receptionist);
+        getOrCreateUser("tech", encoder.encode("tech"), technician);
     }
 
     // ---------------- helpers ----------------
@@ -137,7 +201,6 @@ public class DataInitializer {
     private Role getOrCreateRole(String name) {
         return roles.findByName(name).orElseGet(() -> {
             Role r = Role.builder().name(name).build();
-            // IMPORTANT: avoid NullPointer on authorities
             if (r.getAuthorities() == null) r.setAuthorities(new HashSet<>());
             return roles.save(r);
         });

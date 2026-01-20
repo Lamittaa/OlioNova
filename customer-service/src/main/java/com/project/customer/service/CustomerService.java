@@ -3,6 +3,7 @@ package com.project.customer.service;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.project.customer.dto.CreateCustomerRequest;
 import com.project.customer.dto.CreateCustomerResponse;
@@ -102,6 +103,13 @@ public CustomerResponse updateNationalId(Long id, String newNationalId) {
 
     var saved = customerRepo.save(customer);
     return customerMapper.toCustomerResponse(saved);
+}
+@Transactional(readOnly = true)
+public boolean getMembershipByCustomerId(Long id) {
+    var customer = customerRepo.findById(id)
+        .orElseThrow(() -> new ResourceNotFoundException("Customer not found with id: " + id));
+
+    return Boolean.TRUE.equals(customer.getIsMember()); // أو customer.isMember حسب اسم الحقل عندك
 }
 
 }

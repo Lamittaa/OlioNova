@@ -15,10 +15,10 @@
     </parent>
 
     <groupId>com.project</groupId>
-    <artifactId>order-service</artifactId>
+    <artifactId>productionStages-service</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>order-service</name>
-    <description>Order Management Microservice for Olive Press Management System</description>
+    <name>productionStages-service</name>
+    <description>productionStages Management Microservice for Olive Press Management System</description>
 
     <!-- Properties -->
     <properties>

@@ -1,52 +1,43 @@
 server:
   port: 8080
-spring:
-  application:
-    name: api-gateway
-cloud:
+
+  cloud:
     gateway:
       globalcors:
         cors-configurations:
           "[/**]":
             allowedOrigins: "*"
             allowedHeaders: "*"
-            allowedMethods: [GET, POST, PUT, PATCH, DELETE]
+            allowedMethods: [GET, POST, PUT, PATCH, DELETE, OPTIONS]
 
       routes:
-        - id: auth-auth
-          uri: lb://auth-service
+        # AUTH-SERVICE
+        - id: auth-api
+          uri: lb://AUTH-SERVICE
           predicates:
-            - Path=/api/auth-service/auth/**
-          filters:
-            - RewritePath=/api/auth-service/(?<path>.*), /api/${path}
+            - Path=/api/auth/**,/api/users/**,/api/roles/**
 
-        - id: auth-users
-          uri: lb://auth-service
+        # CUSTOMER-SERVICE
+        - id: customer-api
+          uri: lb://CUSTOMER-SERVICE
           predicates:
-            - Path=/api/auth-service/users/**
-          filters:
-            - RewritePath=/api/auth-service/(?<path>.*), /api/${path}
+            - Path=/api/customers/**,/api/cities/**
 
-        - id: auth-roles
-          uri: lb://auth-service
+        # ORDER-SERVICE
+        - id: order-api
+          uri: lb://ORDER-SERVICE
           predicates:
-            - Path=/api/auth-service/roles/**
-          filters:
-            - RewritePath=/api/auth-service/(?<path>.*), /api/${path}
-
-        - id: customer-customers
-          uri: lb://customer-service
+            - Path=/api/orders/**,/api/products/**,/api/order-statuses/**
+        # PAYMENT-SERVICE
+        - id: payment-api
+          uri: lb://PAYMENT-SERVICE
           predicates:
-            - Path=/api/customer-service/customers/**
-          filters:
-            - RewritePath=/api/customer-service/(?<path>.*), /api/${path}
-
-        - id: customer-cities
-          uri: lb://customer-service
+            - Path=/api/payments/**,/api/payment-methods/**
+        # PRODUCTIONSTAGES-SERVICE
+        - id: productionStages-api      
+          uri: lb://PRODUCTIONSTAGES-SERVICE
           predicates:
-            - Path=/api/customer-service/cities/**
-          filters:
-            - RewritePath=/api/customer-service/(?<path>.*), /api/${path}
+            - Path=/api/production-stages/**,/api/stage-types/**
 
 eureka:
   client:
@@ -58,17 +49,6 @@ security:
     secret: "MySuperSecretKeyForJwt1234567890MyExtra"
     access-expiration-ms: 900000
     refresh-expiration-ms: 604800000
-
-springdoc:
-  api-docs:
-    path: /v3/api-docs
-  swagger-ui:
-    path: /docs
-    urls:
-      - name: auth-service
-        url: /api/auth-service/v3/api-docs
-      - name: customer-service
-        url: /api/customer-service/v3/api-docs
 
 management:
   endpoints:

@@ -1,9 +1,9 @@
 server:
-  port: 8098
+  port: 9020
 
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/authdb
+    url: jdbc:postgresql://localhost:5432/paymentdb
     username: postgres
     password: postgres
     driver-class-name: org.postgresql.Driver
@@ -30,8 +30,7 @@ eureka:
 security:
   jwt:
     secret: "MySuperSecretKeyForJwt1234567890MyExtra"
-    access-expiration-ms: 900000
-    refresh-expiration-ms: 604800000
+
 springdoc:
   api-docs:
     path: /v3/api-docs

@@ -253,4 +253,35 @@ public class CustomerController {
         var res = customerService.updateNationalId(id, request.getNationalId());
         return ResponseEntity.ok(res);
     }
+    // ================= MEMBERSHIP =================
+
+@GetMapping("/{id}/membership")
+@PreAuthorize("hasAnyRole('ADMIN','RECEPTIONIST','ACCOUNTANT') and hasAuthority('CUSTOMER_READ')")
+@Operation(
+    summary = "Get customer membership",
+    description = "Returns whether the customer is a member (true/false). Used by Order Service for pricing."
+)
+@ApiResponses({
+    @ApiResponse(
+        responseCode = "200",
+        description = "Membership status returned",
+        content = @Content(
+            examples = @ExampleObject(
+                value = """
+                { "isMembership": true }
+                """
+            )
+        )
+    ),
+    @ApiResponse(responseCode = "403", description = "Forbidden (missing CUSTOMER_READ authority)"),
+    @ApiResponse(responseCode = "404", description = "Customer not found")
+})
+public ResponseEntity<MembershipResponse> getMembership(@PathVariable Long id) {
+    boolean isMember = customerService.getMembershipByCustomerId(id);
+    return ResponseEntity.ok(new MembershipResponse(isMember));
+}
+
+// DTO صغير للرد
+public record MembershipResponse(boolean isMembership) {}
+
 }

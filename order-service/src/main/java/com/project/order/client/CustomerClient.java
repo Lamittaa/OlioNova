@@ -1,0 +1,15 @@
+package com.project.order.client;
+
+import com.project.order.config.FeignAuthForwardConfig;
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+
+@FeignClient(name = "CUSTOMER-SERVICE", configuration = FeignAuthForwardConfig.class)
+public interface CustomerClient {
+
+    @GetMapping("/api/customers/{id}/membership")
+    MembershipResponse getMembership(@PathVariable Long id);
+
+    record MembershipResponse(boolean isMembership) {}
+}
