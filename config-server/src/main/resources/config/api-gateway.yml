@@ -1,6 +1,7 @@
 server:
   port: 8080
 
+spring:
   cloud:
     gateway:
       globalcors:
@@ -28,30 +29,19 @@ server:
           uri: lb://ORDER-SERVICE
           predicates:
             - Path=/api/orders/**,/api/products/**,/api/order-statuses/**
+
         # PAYMENT-SERVICE
         - id: payment-api
           uri: lb://PAYMENT-SERVICE
           predicates:
             - Path=/api/payments/**,/api/payment-methods/**
+
         # PRODUCTIONSTAGES-SERVICE
-        - id: productionStages-api      
+        - id: productionStages-api
           uri: lb://PRODUCTIONSTAGES-SERVICE
           predicates:
             - Path=/api/production-stages/**,/api/stage-types/**
 
-eureka:
-  client:
-    service-url:
-      defaultZone: http://localhost:8761/eureka
-
 security:
   jwt:
-    secret: "MySuperSecretKeyForJwt1234567890MyExtra"
-    access-expiration-ms: 900000
-    refresh-expiration-ms: 604800000
-
-management:
-  endpoints:
-    web:
-      exposure:
-        include: "*"
+    secret: MySuperSecretKeyForJwt1234567890MyExtra
