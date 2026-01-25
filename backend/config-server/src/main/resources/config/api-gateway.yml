@@ -34,7 +34,7 @@ spring:
         - id: payment-api
           uri: lb://PAYMENT-SERVICE
           predicates:
-            - Path=/api/payments/**,/api/payment-methods/**
+            - Path=/api/payments/**
 
         # PRODUCTIONSTAGES-SERVICE
         - id: productionStages-api

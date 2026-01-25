@@ -2,6 +2,7 @@ package com.project.payment.security;
 
 import javax.crypto.spec.SecretKeySpec;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -20,10 +21,13 @@ import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
 @EnableMethodSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
 
     @Value("${security.jwt.secret}")
     private String jwtSecret;
+
+    private final SecurityErrorHandler securityErrorHandler;
 
     @Bean
     SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -31,21 +35,34 @@ public class SecurityConfig {
         http
             .csrf(csrf -> csrf.disable())
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
             .authorizeHttpRequests(auth -> auth
                 // Swagger public
                 .requestMatchers(
                     "/swagger-ui/**",
                     "/swagger-ui.html",
                     "/v3/api-docs/**"
+                    
                 ).permitAll()
 
-                // (اختياري) health check لو عندك
+                // health check
                 .requestMatchers("/actuator/health").permitAll()
 
                 // باقي الطلبات لازم JWT
                 .anyRequest().authenticated()
             )
+
+            // ⭐ مهم: يخلي 401/403 يطلعوا JSON عبر SecurityErrorHandler
+            .exceptionHandling(eh -> eh
+                .authenticationEntryPoint(securityErrorHandler)
+                .accessDeniedHandler(securityErrorHandler)
+            )
+
             .oauth2ResourceServer(oauth2 -> oauth2
+                // ⭐ كمان هون للضمان
+                .authenticationEntryPoint(securityErrorHandler)
+                .accessDeniedHandler(securityErrorHandler)
+
                 .jwt(jwt -> jwt
                     .decoder(jwtDecoder())
                     .jwtAuthenticationConverter(jwtAuthenticationConverter())
@@ -69,8 +86,8 @@ public class SecurityConfig {
         // لازم يطابق اسم الـ claim داخل الـ JWT
         authoritiesConverter.setAuthoritiesClaimName("authorities");
 
-        // إذا عندك values مثل ROLE_ADMIN خليها ""
-        // إذا عندك values مثل ADMIN وخلاص بدك تستخدم hasRole('ADMIN') خليها "ROLE_"
+        // إذا عندك authorities مثل ROLE_ADMIN و PRODUCT_CREATE ... خليها ""
+        // (يعني ما يضيف ROLE_ زيادة)
         authoritiesConverter.setAuthorityPrefix("");
 
         var jwtConverter = new JwtAuthenticationConverter();
