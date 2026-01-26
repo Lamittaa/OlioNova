@@ -50,13 +50,6 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/users/profile")
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ProfileDto> getCurrentUserProfile(Authentication authentication) {
-        log.info("[CONTROLLER] /users/me called by {}", authentication.getName());
-        ProfileDto profile = authService.getMyProfile(authentication);
-        return ResponseEntity.ok(profile);
-    }
 
 @PostMapping("/set-password")
 @ResponseStatus(HttpStatus.NO_CONTENT)

@@ -3,37 +3,29 @@ package com.project.auth_service.service;
 import com.project.auth_service.exception.InvalidTokenException;
 import com.project.auth_service.exception.TokenExpiredException;
 import com.project.auth_service.exception.UserNotFoundException;
-import com.project.auth_service.mapper.UserMapper;
 import com.project.auth_service.model.ActivationToken;
 import com.project.auth_service.model.Token;
 import com.project.auth_service.model.User;
 import com.project.auth_service.repository.UserRepository;
-
-import jakarta.persistence.EntityNotFoundException;
-
 import com.project.auth_service.dto.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.security.core.Authentication;
 import com.project.auth_service.repository.ActivationTokenRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
-
 import java.time.Instant;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuthService {
-    private final UserMapper userMapper;
-    private final ActivationTokenRepository tokenRepo;   // ✅ أضيفي هذا
-    private final PasswordEncoder passwordEncoder;   
+    private final ActivationTokenRepository tokenRepo; // ✅ أضيفي هذا
+    private final PasswordEncoder passwordEncoder;
     private final UserRepository userRepo;
     private final AuthenticationManager authManager;
     private final JwtService jwtService;
@@ -47,8 +39,7 @@ public class AuthService {
 
         try {
             authManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
-            );
+                    new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()));
         } catch (BadCredentialsException ex) {
             log.warn("Failed login for username: {}", request.getUsername());
             throw ex; // يُمسك داخل GlobalExceptionHandler
@@ -58,13 +49,13 @@ public class AuthService {
         String accessToken = jwtService.generateAccessToken(userDetails);
         String refreshToken = jwtService.generateRefreshToken(userDetails);
 
-
         User user = userRepo.findByUsername(request.getUsername())
                 .orElseThrow(() -> new UserNotFoundException("User not found: " + request.getUsername()));
 
         long refreshTtlSeconds = jwtService.getRefreshTokenTtlSeconds();
         long accessTtlSeconds = jwtService.getAccessTokenTtlSeconds();
-        tokenService.saveAccessToken(user, accessToken, Instant.now().plusSeconds(accessTtlSeconds), refreshToken, Instant.now().plusSeconds(refreshTtlSeconds));
+        tokenService.saveAccessToken(user, accessToken, Instant.now().plusSeconds(accessTtlSeconds), refreshToken,
+                Instant.now().plusSeconds(refreshTtlSeconds));
 
         log.info("User {} logged in successfully with role {}", user.getUsername(), user.getRole().getName());
 
@@ -78,7 +69,6 @@ public class AuthService {
                 .role(user.getRole().getName())
                 .build();
     }
-
 
     @Transactional
     public RefreshResponseDto refresh(RefreshRequestDto dto) {
@@ -101,7 +91,8 @@ public class AuthService {
         String newRefresh = jwtService.generateRefreshToken(userDetails);
 
         long refreshTtlSeconds = jwtService.getRefreshTokenTtlSeconds();
-        tokenService.saveAccessToken(user, newAccess, Instant.now().plusSeconds(refreshTtlSeconds), newRefresh, Instant.now().plusSeconds(refreshTtlSeconds));
+        tokenService.saveAccessToken(user, newAccess, Instant.now().plusSeconds(refreshTtlSeconds), newRefresh,
+                Instant.now().plusSeconds(refreshTtlSeconds));
 
         log.info("Refresh token rotation successful for {}", user.getUsername());
 
@@ -136,45 +127,22 @@ public class AuthService {
         log.info("Tokens revoked manually for user {}", userName);
     }
 
-    @Transactional(readOnly = true)
-    public ProfileDto getMyProfile(Authentication auth) {
-        try {
-            String username = auth.getName();
-            log.info("[PROFILE] Fetching profile for user: {}", username);
+    @Transactional
+    public void setPassword(SetPasswordRequest req) {
 
-            User user = userRepo.findByUsername(username)
-                    .orElseThrow(() -> new EntityNotFoundException("User not found: " + username));
+        ActivationToken token = tokenRepo.findByToken(req.getToken())
+                .orElseThrow(() -> new InvalidTokenException("Invalid activation token"));
 
-            ProfileDto dto = userMapper.toProfileDto(user);
-            log.info("[PROFILE] Profile fetched successfully for {}", username);
-
-            return dto;
-        } catch (EntityNotFoundException ex) {
-            log.warn("[PROFILE] User not found: {}", ex.getMessage());
-            throw ex; // يرجعها لـ GlobalExceptionHandler
-        } catch (Exception ex) {
-            log.error("[PROFILE] Unexpected error while fetching profile", ex);
-            throw new RuntimeException("Failed to load profile", ex);
+        if (token.getExpiresAt().isBefore(Instant.now())) {
+            throw new TokenExpiredException("Activation token expired");
         }
+
+        User user = token.getUser();
+
+        user.setPassword(passwordEncoder.encode(req.getNewPassword()));
+        user.setEnabled(true);
+
+        tokenRepo.delete(token);
     }
-@Transactional
-public void setPassword(SetPasswordRequest req) {
-
-    ActivationToken token = tokenRepo.findByToken(req.getToken())
-            .orElseThrow(() ->
-                    new InvalidTokenException("Invalid activation token")
-            );
-
-    if (token.getExpiresAt().isBefore(Instant.now())) {
-        throw new TokenExpiredException("Activation token expired");
-    }
-
-    User user = token.getUser();
-
-    user.setPassword(passwordEncoder.encode(req.getNewPassword()));
-    user.setEnabled(true);
-
-    tokenRepo.delete(token);
-}
 
 }
