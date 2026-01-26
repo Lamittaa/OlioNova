@@ -148,6 +148,20 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.BAD_REQUEST, ex.getMessage(), req, "LOGOUT_ERROR", null);
     }
 
+@ExceptionHandler(EmployeeNotFoundException.class)
+public ResponseEntity<ErrorResponseDto> handleEmployeeNotFound(
+        EmployeeNotFoundException ex,
+        HttpServletRequest req
+) {
+    log.warn("Employee not found: {}", ex.getMessage());
+    return build(
+            HttpStatus.NOT_FOUND,
+            ex.getMessage(),
+            req,
+            "EMPLOYEE_NOT_FOUND",
+            null
+    );
+}
 
     @ExceptionHandler(EntityAlreadyExistsException.class)
     public ResponseEntity<ErrorResponseDto> handleEntityAlreadyExists(EntityAlreadyExistsException ex, HttpServletRequest req) {

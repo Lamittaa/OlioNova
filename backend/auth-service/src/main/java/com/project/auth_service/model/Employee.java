@@ -16,13 +16,13 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@EqualsAndHashCode(of = "id")
 public class Employee {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // رقم الهوية
     @Column(name = "national_id", nullable = false, length = 20)
     private String nationalId;
 
@@ -35,21 +35,18 @@ public class Employee {
     @Column(name = "phone_number", nullable = false, length = 20)
     private String phoneNumber;
 
-    @Column(nullable = true, length = 100)
+    @Column(nullable = false, length = 100)
     private String email;
 
-    // MALE / FEMALE
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 10)
     private Gender gender;
 
-    // SINGLE / MARRIED
     @Enumerated(EnumType.STRING)
     @Column(name = "martial_status", nullable = false, length = 20)
     private MaritalStatus martialStatus;
 
-    // ربط الموظف مع اليوزر (auth-service)
-    @OneToOne(fetch = FetchType.LAZY, optional = false)
+    @OneToOne(fetch = FetchType.LAZY, optional = false, cascade = CascadeType.ALL)
     @JoinColumn(
         name = "user_id",
         nullable = false,

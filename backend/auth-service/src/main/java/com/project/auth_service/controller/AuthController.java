@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.security.Security;
 import java.util.HashMap;
 import java.util.Map;
+import org.springframework.http.HttpStatus;
 
 import org.springframework.security.core.Authentication;
 import org.springframework.http.ResponseEntity;
@@ -57,5 +58,10 @@ public class AuthController {
         return ResponseEntity.ok(profile);
     }
 
+@PostMapping("/set-password")
+@ResponseStatus(HttpStatus.NO_CONTENT)
+public void setPassword(@Valid @RequestBody SetPasswordRequest req) {
+    authService.setPassword(req);
+}
 
 }

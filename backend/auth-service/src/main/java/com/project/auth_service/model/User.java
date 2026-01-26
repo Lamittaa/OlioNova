@@ -1,8 +1,5 @@
 package com.project.auth_service.model;
 
-import java.util.HashSet;
-import java.util.Set;
-
 import jakarta.persistence.*;
 import lombok.*;
 

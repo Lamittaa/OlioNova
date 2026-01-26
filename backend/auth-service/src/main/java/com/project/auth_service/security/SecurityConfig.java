@@ -50,7 +50,7 @@ public class SecurityConfig {
             .authenticationProvider(daoAuthProvider())
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(org.springframework.http.HttpMethod.POST,
-                                  "/api/auth/login", "/api/auth/refresh").permitAll()
+                                  "/api/auth/login", "/api/auth/set-password" , "/api/auth/refresh").permitAll()
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/actuator/health").permitAll()
                 .anyRequest().authenticated()

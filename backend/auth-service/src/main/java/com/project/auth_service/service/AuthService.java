@@ -1,7 +1,10 @@
 package com.project.auth_service.service;
 
+import com.project.auth_service.exception.InvalidTokenException;
+import com.project.auth_service.exception.TokenExpiredException;
 import com.project.auth_service.exception.UserNotFoundException;
 import com.project.auth_service.mapper.UserMapper;
+import com.project.auth_service.model.ActivationToken;
 import com.project.auth_service.model.Token;
 import com.project.auth_service.model.User;
 import com.project.auth_service.repository.UserRepository;
@@ -19,6 +22,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.core.Authentication;
+import com.project.auth_service.repository.ActivationTokenRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.Instant;
 
@@ -27,7 +32,8 @@ import java.time.Instant;
 @RequiredArgsConstructor
 public class AuthService {
     private final UserMapper userMapper;
-
+    private final ActivationTokenRepository tokenRepo;   // ✅ أضيفي هذا
+    private final PasswordEncoder passwordEncoder;   
     private final UserRepository userRepo;
     private final AuthenticationManager authManager;
     private final JwtService jwtService;
@@ -151,5 +157,24 @@ public class AuthService {
             throw new RuntimeException("Failed to load profile", ex);
         }
     }
+@Transactional
+public void setPassword(SetPasswordRequest req) {
+
+    ActivationToken token = tokenRepo.findByToken(req.getToken())
+            .orElseThrow(() ->
+                    new InvalidTokenException("Invalid activation token")
+            );
+
+    if (token.getExpiresAt().isBefore(Instant.now())) {
+        throw new TokenExpiredException("Activation token expired");
+    }
+
+    User user = token.getUser();
+
+    user.setPassword(passwordEncoder.encode(req.getNewPassword()));
+    user.setEnabled(true);
+
+    tokenRepo.delete(token);
+}
 
 }

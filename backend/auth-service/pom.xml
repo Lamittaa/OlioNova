@@ -14,6 +14,7 @@
         <relativePath/>
     </parent>
 
+
     <groupId>com.project</groupId>
     <artifactId>auth-service</artifactId>
     <version>0.0.1-SNAPSHOT</version>
@@ -35,7 +36,11 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
-
+<!-- Email (JavaMail / Jakarta Mail) -->
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-mail</artifactId>
+</dependency>
         <!-- 🔐 Security -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
