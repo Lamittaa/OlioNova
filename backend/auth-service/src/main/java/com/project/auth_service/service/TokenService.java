@@ -46,6 +46,13 @@ public class TokenService {
         }
         return accessToken;
     }
+
+    public void revokeAllUserTokens(String userName) {
+        var userTokens = repo.findAllByUser_Username(userName);
+        userTokens.forEach(token -> token.setRevoked(true));
+        repo.saveAll(userTokens);
+    }
+
 public Token validateUsableRefreshToken(String refreshToken) {
     Token rt = repo.findByRefreshToken(refreshToken)  // ✅ صح
             .orElseThrow(() -> new InvalidTokenException("Invalid refresh token"));

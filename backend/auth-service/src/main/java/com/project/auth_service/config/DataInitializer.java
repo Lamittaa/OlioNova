@@ -11,6 +11,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
@@ -18,19 +19,14 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-@Configuration
 @RequiredArgsConstructor
+@Component
 public class DataInitializer {
 
     private final RoleRepository roles;
     private final AuthorityRepository auths;
     private final UserRepository users;
     private final PasswordEncoder encoder;
-
-    @Bean
-    CommandLineRunner seed() {
-        return args -> seedData();
-    }
 
     @Transactional
     void seedData() {

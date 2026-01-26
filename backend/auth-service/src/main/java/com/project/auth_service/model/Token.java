@@ -20,10 +20,10 @@ public class Token {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 1000000)
+    @Column(nullable = false, unique = true, columnDefinition = "text")
     private String accessToken;
 
-    @Column(nullable = false, unique = true, length = 1000000)
+    @Column(nullable = false, unique = true, columnDefinition = "text")
     private String refreshToken;
 
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
