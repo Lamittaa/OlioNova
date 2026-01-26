@@ -3,7 +3,7 @@ package com.project.auth_service.service;
 import com.project.auth_service.dto.*;
 import com.project.auth_service.exception.AuthorityNotAssignedException;
 import com.project.auth_service.exception.EntityAlreadyExistsException;
-import com.project.auth_service.exception.RoleInUseException;
+import com.project.auth_service.exception.EntityInUseException;
 import com.project.auth_service.exception.RoleNotFoundException;
 import com.project.auth_service.model.Authority;
 import com.project.auth_service.model.Role;
@@ -122,7 +122,7 @@ public void deleteRole(Long roleId) {
 
     boolean roleInUse = userRepository.existsByRole_Id(roleId);
     if (roleInUse) {
-        throw new RoleInUseException("Cannot delete role because it is assigned to existing users.");
+        throw new EntityInUseException("Cannot delete role because it is assigned to existing users.");
     }
 
     roleRepository.delete(role);

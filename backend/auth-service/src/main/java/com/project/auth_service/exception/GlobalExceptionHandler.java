@@ -28,7 +28,6 @@ import java.util.UUID;
 public class GlobalExceptionHandler {
 
 
-
     @ExceptionHandler(RoleNotFoundException.class)
     public ResponseEntity<ErrorResponseDto> handleRoleNotFound(RoleNotFoundException ex, HttpServletRequest req) {
         return build(HttpStatus.NOT_FOUND, ex.getMessage(), req, "ROLE_NOT_FOUND", null);
@@ -39,25 +38,24 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.NOT_FOUND, ex.getMessage(), req, "USER_NOT_FOUND", null);
     }
 
- 
 
-@ExceptionHandler({ BadCredentialsException.class, AuthenticationException.class })
-public ResponseEntity<ErrorResponseDto> handleAuth(AuthenticationException ex, HttpServletRequest req) {
-    log.warn("Authentication failed from IP={} - {}", req.getRemoteAddr(), ex.getMessage());
-    return build(HttpStatus.UNAUTHORIZED, "Invalid username or password", req, "BAD_CREDENTIALS", null);
-}
- 
-@ExceptionHandler(EntityNotFoundException.class)
-public ResponseEntity<ErrorResponseDto> handleEntityNotFound(EntityNotFoundException ex, HttpServletRequest req) {
-    log.warn("[EXCEPTION] Entity not found: {}", ex.getMessage());
-    return build(HttpStatus.NOT_FOUND, ex.getMessage(), req, "ENTITY_NOT_FOUND", null);
-}
-@ExceptionHandler(RoleInUseException.class)
-public ResponseEntity<ErrorResponseDto> handleRoleInUse(RoleInUseException ex, HttpServletRequest req) {
-    log.warn("Attempted to delete a role in use: {}", ex.getMessage());
-    return build(HttpStatus.CONFLICT, ex.getMessage(), req, "ROLE_IN_USE", null);
-}
+    @ExceptionHandler({BadCredentialsException.class, AuthenticationException.class})
+    public ResponseEntity<ErrorResponseDto> handleAuth(AuthenticationException ex, HttpServletRequest req) {
+        log.warn("Authentication failed from IP={} - {}", req.getRemoteAddr(), ex.getMessage());
+        return build(HttpStatus.UNAUTHORIZED, "Invalid username or password", req, "BAD_CREDENTIALS", null);
+    }
 
+    @ExceptionHandler(EntityNotFoundException.class)
+    public ResponseEntity<ErrorResponseDto> handleEntityNotFound(EntityNotFoundException ex, HttpServletRequest req) {
+        log.warn("[EXCEPTION] Entity not found: {}", ex.getMessage());
+        return build(HttpStatus.NOT_FOUND, ex.getMessage(), req, "ENTITY_NOT_FOUND", null);
+    }
+
+    @ExceptionHandler(EntityInUseException.class)
+    public ResponseEntity<ErrorResponseDto> handleEntityInUse(EntityInUseException ex, HttpServletRequest req) {
+        log.warn("Attempted to delete an entity which is in use: {}", ex.getMessage());
+        return build(HttpStatus.CONFLICT, ex.getMessage(), req, "Entity_IN_USE", null);
+    }
 
 
     @ExceptionHandler(AccessDeniedException.class)
@@ -70,7 +68,6 @@ public ResponseEntity<ErrorResponseDto> handleRoleInUse(RoleInUseException ex, H
         return build(HttpStatus.BAD_REQUEST, ex.getMessage(), req, "BAD_REQUEST", null);
     }
 
-   
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponseDto> handleValidation(MethodArgumentNotValidException ex, HttpServletRequest req) {
@@ -119,49 +116,47 @@ public ResponseEntity<ErrorResponseDto> handleRoleInUse(RoleInUseException ex, H
     }
 
 
-
-@ExceptionHandler(AuthorityNotAssignedException.class)
-public ResponseEntity<ErrorResponseDto> handleAuthorityNotAssignedException(AuthorityNotAssignedException ex, HttpServletRequest req) {
-    log.warn("Authority not assigned: {}", ex.getMessage());
-    return build(HttpStatus.BAD_REQUEST, ex.getMessage(), req, "AUTHORITY_NOT_ASSIGNED", null);
-}
-
+    @ExceptionHandler(AuthorityNotAssignedException.class)
+    public ResponseEntity<ErrorResponseDto> handleAuthorityNotAssignedException(AuthorityNotAssignedException ex, HttpServletRequest req) {
+        log.warn("Authority not assigned: {}", ex.getMessage());
+        return build(HttpStatus.BAD_REQUEST, ex.getMessage(), req, "AUTHORITY_NOT_ASSIGNED", null);
+    }
 
 
-       // 🔹 Refresh Token Errors
-    @ExceptionHandler({ InvalidTokenException.class })
+    // 🔹 Refresh Token Errors
+    @ExceptionHandler({InvalidTokenException.class})
     public ResponseEntity<ErrorResponseDto> handleInvalidRefresh(InvalidTokenException ex, HttpServletRequest req) {
         log.warn("Invalid refresh token: {}", ex.getMessage());
         return build(HttpStatus.UNAUTHORIZED, ex.getMessage(), req, "REFRESH_TOKEN_INVALID", null);
     }
 
-    @ExceptionHandler({ TokenExpiredException.class })
+    @ExceptionHandler({TokenExpiredException.class})
     public ResponseEntity<ErrorResponseDto> handleRefreshExpired(TokenExpiredException ex, HttpServletRequest req) {
         log.warn("Expired refresh token: {}", ex.getMessage());
         return build(HttpStatus.UNAUTHORIZED, ex.getMessage(), req, "REFRESH_TOKEN_EXPIRED", null);
     }
 
-    @ExceptionHandler({ TokenRevokedException.class })
+    @ExceptionHandler({TokenRevokedException.class})
     public ResponseEntity<ErrorResponseDto> handleRefreshRevoked(TokenRevokedException ex, HttpServletRequest req) {
         log.warn("Revoked refresh token used: {}", ex.getMessage());
         return build(HttpStatus.UNAUTHORIZED, ex.getMessage(), req, "REFRESH_TOKEN_REVOKED", null);
     }
 
-@ExceptionHandler(IllegalStateException.class)
-public ResponseEntity<ErrorResponseDto> handleIllegalState(IllegalStateException ex, HttpServletRequest req) {
-    log.warn("Illegal state: {}", ex.getMessage());
-    return build(HttpStatus.BAD_REQUEST, ex.getMessage(), req, "LOGOUT_ERROR", null);
-}
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ErrorResponseDto> handleIllegalState(IllegalStateException ex, HttpServletRequest req) {
+        log.warn("Illegal state: {}", ex.getMessage());
+        return build(HttpStatus.BAD_REQUEST, ex.getMessage(), req, "LOGOUT_ERROR", null);
+    }
 
 
-@ExceptionHandler(EntityAlreadyExistsException.class)
-public ResponseEntity<ErrorResponseDto> handleEntityAlreadyExists(EntityAlreadyExistsException ex, HttpServletRequest req) {
-    return build(HttpStatus.CONFLICT, ex.getMessage(), req, "ENTITY_ALREADY_EXISTS", null);
-}
+    @ExceptionHandler(EntityAlreadyExistsException.class)
+    public ResponseEntity<ErrorResponseDto> handleEntityAlreadyExists(EntityAlreadyExistsException ex, HttpServletRequest req) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), req, "ENTITY_ALREADY_EXISTS", null);
+    }
 
     // ---------- Helpers ----------
     private ResponseEntity<ErrorResponseDto> build(HttpStatus status, String msg, HttpServletRequest req,
-                                                String code, List<FieldErrorDto> fieldErrors) {
+                                                   String code, List<FieldErrorDto> fieldErrors) {
         ErrorResponseDto body = ErrorResponseDto.builder()
                 .timestamp(Instant.now())
                 .status(status.value())
@@ -177,19 +172,6 @@ public ResponseEntity<ErrorResponseDto> handleEntityAlreadyExists(EntityAlreadyE
     private FieldErrorDto toFieldErrorDto(FieldError fe) {
         return new FieldErrorDto(fe.getField(), fe.getDefaultMessage(), fe.getRejectedValue());
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 }

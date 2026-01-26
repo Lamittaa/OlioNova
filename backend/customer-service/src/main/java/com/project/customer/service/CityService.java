@@ -2,6 +2,9 @@ package com.project.customer.service;
 
 import java.util.List;
 
+import com.project.customer.exception.EntityInUseException;
+import jakarta.validation.constraints.NotNull;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.project.customer.dto.CityResponse;
@@ -24,24 +27,23 @@ public class CityService {
     private final CityRepo cityRepo;
     private final CityMapper cityMapper;
 
-    
-  
-public CreateCityResponse createCity(CreateCityRequest request) {
 
-    String name = request.getCityName().trim();
+    public CreateCityResponse createCity(CreateCityRequest request) {
 
-    if (cityRepo.existsByCityNameIgnoreCase(name)) {
-        throw new EntityAlreadyExistsException("City already exists with name: " + name);
+        String name = request.getCityName().trim();
+
+        if (cityRepo.existsByCityNameIgnoreCase(name)) {
+            throw new EntityAlreadyExistsException("City already exists with name: " + name);
+        }
+
+        CityLookup city = cityMapper.toEntity(request);
+        city.setCityName(name);
+
+        CityLookup saved = cityRepo.save(city);
+        return cityMapper.toCreateCityResponse(saved);
     }
 
-    CityLookup city = cityMapper.toEntity(request);
-    city.setCityName(name);
 
-    CityLookup saved = cityRepo.save(city);
-    return cityMapper.toCreateCityResponse(saved);
-}
-
- 
     @Transactional(readOnly = true)
     public CityResponse getCityById(Long id) {
         CityLookup city = cityRepo.findById(id)
@@ -50,7 +52,7 @@ public CreateCityResponse createCity(CreateCityRequest request) {
         return cityMapper.toCityResponse(city);
     }
 
-   
+
     @Transactional(readOnly = true)
     public List<CityResponse> getAllCities() {
         return cityRepo.findAll()
@@ -59,7 +61,7 @@ public CreateCityResponse createCity(CreateCityRequest request) {
                 .toList();
     }
 
-  
+
     public CityResponse updateCity(Long id, UpdateCityRequest request) {
         CityLookup city = cityRepo.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("City not found with id: " + id));
@@ -70,11 +72,21 @@ public CreateCityResponse createCity(CreateCityRequest request) {
         return cityMapper.toCityResponse(saved);
     }
 
-   
+
     public void deleteCity(Long id) {
         CityLookup city = cityRepo.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("City not found with id: " + id));
+        try {
+            cityRepo.delete(city);
+            cityRepo.flush();
+        } catch (DataIntegrityViolationException ex) {
+            throw new EntityInUseException("Cannot delete city because it is used by another entities.");
+        }
+    }
 
-        cityRepo.delete(city);
+    public CityLookup findById(@NotNull(message = "City ID cannot be null") Long cityId) {
+        CityLookup city = cityRepo.findById(cityId)
+                .orElseThrow(() -> new ResourceNotFoundException("City not found with id: " + cityId));
+        return city;
     }
 }

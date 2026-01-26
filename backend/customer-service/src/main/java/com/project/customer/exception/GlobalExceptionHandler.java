@@ -116,6 +116,12 @@ public ResponseEntity<ErrorResponse> handleDenied(AccessDeniedException ex, Http
         );
     }
 
+    @ExceptionHandler(EntityInUseException.class)
+    public ResponseEntity<ErrorResponse> handleEntityInUse(EntityInUseException ex, HttpServletRequest req) {
+        log.warn("Attempted to delete an entity which is in use: {}", ex.getMessage());
+        return build(HttpStatus.CONFLICT, ex.getMessage(), req, "Entity_IN_USE", null);
+    }
+
     // ---------- Helpers ----------
     private ResponseEntity<ErrorResponse> build(HttpStatus status, String msg, HttpServletRequest req,
                                                String code, List<FieldErrorDto> fieldErrors) {

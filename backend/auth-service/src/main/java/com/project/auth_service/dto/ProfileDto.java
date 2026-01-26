@@ -12,7 +12,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class ProfileDto {
     private String username;
-    private String email;
     private String role;
     private List<String> authorities;
 }

@@ -9,3 +9,4 @@ public class CreateCityResponse {
     private Long id;
     private String cityName;
 }
+

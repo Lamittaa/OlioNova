@@ -44,4 +44,6 @@ public class CreateCustomerRequest {
     @NotNull(message = "City ID cannot be null")
     private Long cityId;
 
+    private Boolean isMember;
+
 }

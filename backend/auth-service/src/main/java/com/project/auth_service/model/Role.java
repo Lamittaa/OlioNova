@@ -28,6 +28,4 @@ public class Role {
   @Builder.Default                   // ← نبقيها لتمنع الـ NPE
   private Set<Authority> authorities = new HashSet<>();
 
-   @ManyToMany(mappedBy = "roles")
-    private Set<User> users = new HashSet<>();
 }
