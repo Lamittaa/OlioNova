@@ -1,6 +1,7 @@
 package com.project.auth_service.service;
 
 import com.project.auth_service.dto.CreateEmployeeRequest;
+import com.project.auth_service.dto.UpdateProfileRequest;
 import com.project.auth_service.exception.*;
 import com.project.auth_service.model.*;
 import com.project.auth_service.repository.*;
@@ -112,29 +113,6 @@ public class EmployeeService {
     // =========================================================
     // UPDATE EMPLOYEE (ADMIN)
     // =========================================================
-   public void updateProfile(Employee employee, UpdateEmployeeProfileRequest req) {
-
-    if (req.getFirstName() != null) {
-        employee.setFirstName(req.getFirstName());
-    }
-
-    if (req.getLastName() != null) {
-        employee.setLastName(req.getLastName());
-    }
-
-    if (req.getPhoneNumber() != null) {
-        employee.setPhoneNumber(req.getPhoneNumber());
-    }
-
-    if (req.getEmail() != null) {
-        employee.setEmail(req.getEmail());
-    }
-
-    if (req.getMaritalStatus() != null) {
-        employee.setMartialStatus(req.getMaritalStatus());
-    }
-}
-
 
 
     // =========================================================
@@ -156,17 +134,36 @@ public class EmployeeService {
                 );
     }
 
-    public Employee updateMyProfile(String username, Employee updated) {
-        Employee employee = getMyProfile(username);
+  @Transactional
+public Employee updateMyProfile(String username, UpdateProfileRequest req) {
 
-        employee.setFirstName(updated.getFirstName());
-        employee.setLastName(updated.getLastName());
-        employee.setPhoneNumber(updated.getPhoneNumber());
-        employee.setEmail(updated.getEmail());
-        employee.setMartialStatus(updated.getMartialStatus());
+    Employee employee = getMyProfile(username);
 
-        return employee;
+    if (req.getFirstName() != null) {
+        employee.setFirstName(req.getFirstName());
     }
+
+    if (req.getLastName() != null) {
+        employee.setLastName(req.getLastName());
+    }
+
+    if (req.getPhoneNumber() != null) {
+        employee.setPhoneNumber(req.getPhoneNumber());
+    }
+
+    if (req.getEmail() != null) {
+        employee.setEmail(req.getEmail());
+    }
+
+    if (req.getMaritalStatus() != null) {
+        employee.setMartialStatus(
+                MaritalStatus.valueOf(req.getMaritalStatus())
+        );
+    }
+
+    return employee;
+}
+
 
     // =========================================================
     // CHANGE PASSWORD (AFTER LOGIN)

@@ -5,8 +5,6 @@ import com.project.auth_service.mapper.EmployeeMapper;
 import com.project.auth_service.mapper.ProfileMapper;
 import com.project.auth_service.model.Employee;
 import com.project.auth_service.service.EmployeeService;
-import com.project.auth_service.service.UpdateEmployeeProfileRequest;
-
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -55,14 +53,17 @@ public class EmployeeController {
                 employeeService.getEmployeeById(id));
     }
 
-    @PutMapping("/profile")
+ @PatchMapping("/profile")
     @PreAuthorize("hasAuthority('VIEW_PROFILE')")
-    public ResponseEntity<Void> updateMyProfile(
+    public ProfileResponse updateMyProfile(
             Authentication auth,
-            @Valid @RequestBody UpdateEmployeeProfileRequest req) {
-        Employee employee = employeeService.getMyProfile(auth.getName());
-        employeeService.updateProfile(employee, req);
-        return ResponseEntity.noContent().build();
+            @Valid @RequestBody UpdateProfileRequest req) {
+
+        Employee updated = employeeService.updateMyProfile(
+                auth.getName(), req
+        );
+
+        return profileMapper.toProfile(updated);
     }
 
     @DeleteMapping("/{id}")
@@ -91,22 +92,7 @@ public EmployeeResponse getByNationalId(@PathVariable String nid) {
         return profileMapper.toProfile(emp);
     }
 
-    @PutMapping("/profile")
-    @PreAuthorize("hasAuthority('VIEW_PROFILE')")
-    public ProfileResponse updateMyProfile(
-            Authentication auth,
-            @Valid @RequestBody UpdateProfileRequest req) {
-        Employee current = employeeService.getMyProfile(auth.getName());
-        current.setFirstName(req.getFirstName());
-        current.setLastName(req.getLastName());
-        current.setPhoneNumber(req.getPhoneNumber());
-        current.setEmail(req.getEmail());
-        current.setMartialStatus(
-                com.project.auth_service.model.MaritalStatus.valueOf(req.getMaritalStatus()));
 
-        Employee updated = employeeService.updateMyProfile(auth.getName(), current);
-        return profileMapper.toProfile(updated);
-    }
 
     @PostMapping("/profile/change-password")
     @PreAuthorize("hasAuthority('VIEW_PROFILE')")

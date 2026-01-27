@@ -1,6 +1,7 @@
 package com.project.auth_service.dto;
 
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Pattern;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -8,23 +9,17 @@ import lombok.Setter;
 @Setter
 public class UpdateProfileRequest {
 
-    @NotBlank
-    @Size(max = 50)
     private String firstName;
 
-    @NotBlank
-    @Size(max = 50)
     private String lastName;
 
-    @NotBlank
-    @Size(max = 20)
     private String phoneNumber;
 
     @Email
-    @NotBlank
-    @Size(max = 100)
     private String email;
 
-    @NotNull
+    // ENUM كـ String عشان المرونة
+    @Pattern(regexp = "SINGLE|MARRIED|DIVORCED|WIDOWED")
     private String maritalStatus;
 }
+
