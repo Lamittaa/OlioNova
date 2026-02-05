@@ -10,7 +10,6 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 public class PaymentResponse {
-
     private Long id;
     private Long orderId;
     private BigDecimal totalPrice;

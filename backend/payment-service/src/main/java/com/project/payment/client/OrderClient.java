@@ -1,10 +1,12 @@
 package com.project.payment.client;
 
 import com.project.payment.config.FeignAuthForwardConfig;
+import com.project.payment.dto.OrderSummaryResponse;
+
+import java.util.Map;
+
 import org.springframework.cloud.openfeign.FeignClient;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.*;
 
 @FeignClient(
     name = "ORDER-SERVICE",
@@ -12,11 +14,12 @@ import org.springframework.web.bind.annotation.PutMapping;
 )
 public interface OrderClient {
 
-    // 1️⃣ التأكد إن الطلب موجود
     @GetMapping("/api/orders/{id}")
-    void getOrderById(@PathVariable Long id);
+    OrderSummaryResponse getOrderById(@PathVariable Long id);
 
-    // 2️⃣ تحديث حالة الطلب إلى PAID
-    @PutMapping("/api/orders/{id}/pay")
-    void markOrderAsPaid(@PathVariable Long id);
+    @PutMapping("/api/orders/{id}/status")
+    void updateOrderStatus(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body
+    );
 }

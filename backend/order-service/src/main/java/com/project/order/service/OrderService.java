@@ -5,6 +5,7 @@ import com.project.order.dto.CreateOrderItemRequest;
 import com.project.order.dto.CreateOrderRequest;
 import com.project.order.dto.OrderResponse;
 import com.project.order.exception.InvalidOrderItemsException;
+import com.project.order.exception.InvalidOrderStatusTransitionException;
 import com.project.order.exception.ResourceNotFoundException;
 import com.project.order.mapper.OrderMapper;
 import com.project.order.model.Order;
@@ -87,6 +88,40 @@ public class OrderService {
 
         order.setStatus(getStatus("CANCELED"));
         order.setUpdatedAt(LocalDateTime.now());
+    }
+
+    // ================= PAY (✅ FIXED HERE) =================
+    public void payOrder(Long orderId) {
+
+        Order order = orderRepo.findById(orderId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Order not found with id: " + orderId
+                        )
+                );
+
+        String status = order.getStatus().getStatusName();
+
+        // ❌ ممنوع الدفع إذا مدفوع
+        if ("PAID".equals(status)) {
+            throw new InvalidOrderStatusTransitionException(
+                    "Order already paid"
+            );
+        }
+
+        // ❌ مسموح الدفع فقط من SUBMITTED
+        if (!"SUBMITTED".equals(status)) {
+            throw new InvalidOrderStatusTransitionException(
+                    "Order cannot be paid in status: " + status
+            );
+        }
+
+        OrderStatus paidStatus = getStatus("PAID");
+
+        order.setStatus(paidStatus);
+        order.setUpdatedAt(LocalDateTime.now());
+
+        orderRepo.save(order);
     }
 
     // ================= RESPONSE BUILDER =================
@@ -200,26 +235,29 @@ public class OrderService {
         return item;
     }
 
-@Transactional(readOnly = true)
-public List<OrderResponse> getOrdersByNationalId(String nationalId) {
+    // ================= SEARCH BY NATIONAL ID =================
+    @Transactional(readOnly = true)
+    public List<OrderResponse> getOrdersByNationalId(String nationalId) {
 
-    Long customerId;
+        Long customerId;
 
-    try {
-        customerId = customerClient
-                .getByNationalId(nationalId)
-                .getId();
-    } catch (FeignException.NotFound e) {
-        throw new ResourceNotFoundException(
-                "Customer not found with nationalId: " + nationalId
-        );
+        try {
+            customerId = customerClient
+                    .getByNationalId(nationalId)
+                    .getId();
+        } catch (FeignException.NotFound e) {
+            throw new ResourceNotFoundException(
+                    "Customer not found with nationalId: " + nationalId
+            );
+        }
+
+        return orderRepo.findByCustomerId(customerId)
+                .stream()
+                .map(this::buildOrderResponse)
+                .toList();
     }
 
-    return orderRepo.findByCustomerId(customerId)
-            .stream()
-            .map(this::buildOrderResponse)
-            .toList();
+
+    
 }
 
-
-}

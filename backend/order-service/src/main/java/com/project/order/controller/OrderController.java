@@ -2,7 +2,10 @@ package com.project.order.controller;
 
 import com.project.order.dto.CreateOrderRequest;
 import com.project.order.dto.OrderResponse;
+import com.project.order.dto.UpdateOrderStatusRequest;
 import com.project.order.service.OrderService;
+import com.project.order.service.OrderStatusService;
+
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +22,8 @@ import java.util.List;
 @RequiredArgsConstructor
 @Validated
 public class OrderController {
+
+private final OrderStatusService orderStatusService;
 
     private final OrderService orderService;
 
@@ -71,6 +76,20 @@ public ResponseEntity<List<OrderResponse>> searchByNationalId(
             orderService.getOrdersByNationalId(nationalId)
     );
 }
+ // ================= UPDATE STATUS =================
+   // ================= UPDATE STATUS =================
+@PutMapping("/{id}/status")
+@PreAuthorize("hasAuthority('ORDER_UPDATE_STATUS')")
+public ResponseEntity<OrderResponse> updateOrderStatus(
+        @PathVariable @Min(1) Long id,
+        @Valid @RequestBody UpdateOrderStatusRequest request
+) {
+    return ResponseEntity.ok(
+            orderStatusService.updateStatus(id, request)
+    );
+}
 
+
+    
 
 }

@@ -102,6 +102,20 @@ public ResponseEntity<ErrorResponse> handleDenied(AccessDeniedException ex, Http
     public ResponseEntity<ErrorResponse> handleMethodNotAllowed(HttpRequestMethodNotSupportedException ex, HttpServletRequest req) {
         return build(HttpStatus.METHOD_NOT_ALLOWED, ex.getMessage(), req, "METHOD_NOT_ALLOWED", null);
     }
+@ExceptionHandler(BusinessException.class)
+public ResponseEntity<ErrorResponse> handleBusiness(
+        BusinessException ex,
+        HttpServletRequest req
+) {
+    return build(
+            HttpStatus.BAD_REQUEST,
+            ex.getMessage(),
+            req,
+            "BUSINESS_ERROR",
+            null
+    );
+}
+
 
     // ---------- 5xx عام ----------
     @ExceptionHandler(Exception.class)
@@ -117,24 +131,54 @@ public ResponseEntity<ErrorResponse> handleDenied(AccessDeniedException ex, Http
                 null
         );
     }
-    // ---------- 409 (DB constraints) ----------
-@ExceptionHandler(DataIntegrityViolationException.class)
-public ResponseEntity<ErrorResponse> handleDataIntegrity(DataIntegrityViolationException ex, HttpServletRequest req) {
+  @ExceptionHandler(DataIntegrityViolationException.class)
+public ResponseEntity<ErrorResponse> handleDataIntegrity(
+        DataIntegrityViolationException ex,
+        HttpServletRequest req
+) {
 
-    // رسالة عامة وآمنة للمستخدم (بدون تفاصيل DB)
-    String msg = "Database constraint violation. The request conflicts with existing data.";
+    String rootMsg = ex.getMostSpecificCause().getMessage();
 
-    // إذا بدك logging للتفاصيل (مفيد للتشخيص)
+    // 🔍 لو التعارض سببه order_id
+    if (rootMsg != null && rootMsg.contains("uq_payment_order")) {
+        return build(
+                HttpStatus.CONFLICT,
+                "Payment already exists for this order",
+                req,
+                "PAYMENT_ALREADY_EXISTS",
+                null
+        );
+    }
+
+    // fallback
     String traceId = UUID.randomUUID().toString();
-    log.warn("DataIntegrityViolationException [traceId={}]: {}", traceId, ex.getMostSpecificCause().getMessage(), ex);
+    log.warn("DataIntegrityViolationException [traceId={}]: {}", traceId, rootMsg, ex);
 
     return build(
             HttpStatus.CONFLICT,
-            msg + " traceId=" + traceId,
+            "Database constraint violation. traceId=" + traceId,
             req,
             "DATA_INTEGRITY_VIOLATION",
             null
     );
+}
+
+
+@ExceptionHandler(PaymentAlreadyExistsException.class)
+public ResponseEntity<ErrorResponse> handlePaymentAlreadyExists(
+        PaymentAlreadyExistsException ex,
+        HttpServletRequest request
+) {
+    ErrorResponse error = ErrorResponse.builder()
+            .timestamp(Instant.now())
+            .status(HttpStatus.CONFLICT.value())
+            .error("Conflict")
+            .message(ex.getMessage())
+            .path(request.getRequestURI())
+            .code("PAYMENT_ALREADY_EXISTS")
+            .build();
+
+    return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
 }
 
 

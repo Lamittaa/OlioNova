@@ -29,48 +29,53 @@ public class SecurityConfig {
 
     private final SecurityErrorHandler securityErrorHandler;
 
-    @Bean
-    SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+ @Bean
+SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
-        http
-            .csrf(csrf -> csrf.disable())
-            .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+    http
+        .csrf(csrf -> csrf.disable())
 
-            .authorizeHttpRequests(auth -> auth
-                // Swagger public
-                .requestMatchers(
-                    "/swagger-ui/**",
-                    "/swagger-ui.html",
-                    "/v3/api-docs/**"
-                    
-                ).permitAll()
+        // ✅ هذا اللي يخلي Swagger يفتح طبيعي
+        .formLogin(form -> form.disable())
+        .httpBasic(basic -> basic.disable())
 
-                // health check
-                .requestMatchers("/actuator/health").permitAll()
+        .sessionManagement(sm ->
+            sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+        )
 
-                // باقي الطلبات لازم JWT
-                .anyRequest().authenticated()
+        .authorizeHttpRequests(auth -> auth
+            // Swagger public
+            .requestMatchers(
+                "/swagger-ui/**",
+                "/swagger-ui.html",
+                "/v3/api-docs/**"
+            ).permitAll()
+
+            // health
+            .requestMatchers("/actuator/health").permitAll()
+
+            // باقي الطلبات JWT
+            .anyRequest().authenticated()
+        )
+
+        // JSON errors
+        .exceptionHandling(eh -> eh
+            .authenticationEntryPoint(securityErrorHandler)
+            .accessDeniedHandler(securityErrorHandler)
+        )
+
+        .oauth2ResourceServer(oauth2 -> oauth2
+            .authenticationEntryPoint(securityErrorHandler)
+            .accessDeniedHandler(securityErrorHandler)
+            .jwt(jwt -> jwt
+                .decoder(jwtDecoder())
+                .jwtAuthenticationConverter(jwtAuthenticationConverter())
             )
+        );
 
-            // ⭐ مهم: يخلي 401/403 يطلعوا JSON عبر SecurityErrorHandler
-            .exceptionHandling(eh -> eh
-                .authenticationEntryPoint(securityErrorHandler)
-                .accessDeniedHandler(securityErrorHandler)
-            )
+    return http.build();
+}
 
-            .oauth2ResourceServer(oauth2 -> oauth2
-                // ⭐ كمان هون للضمان
-                .authenticationEntryPoint(securityErrorHandler)
-                .accessDeniedHandler(securityErrorHandler)
-
-                .jwt(jwt -> jwt
-                    .decoder(jwtDecoder())
-                    .jwtAuthenticationConverter(jwtAuthenticationConverter())
-                )
-            );
-
-        return http.build();
-    }
 
     @Bean
     public JwtDecoder jwtDecoder() {

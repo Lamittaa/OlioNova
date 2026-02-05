@@ -67,23 +67,23 @@ public class OrderStatusService {
     return orderMapper.toOrderResponse(orderRepo.save(order));
 }
 
-    private void validateStatusTransition(String current, String next) {
+  private void validateStatusTransition(String current, String next) {
 
-    if (current.equals("SUBMITTED") &&
-            (next.equals("READY_FOR_PAYMENT") || next.equals("CANCELED"))) return;
+    current = current.trim().toUpperCase();
+    next = next.trim().toUpperCase();
 
-    if (current.equals("READY_FOR_PAYMENT") &&
-            (next.equals("PAID") || next.equals("CANCELED"))) return;
+    if (current.equals("SUBMITTED") && next.equals("PAID")) return;
 
     if (current.equals("PAID") &&
-            (next.equals("IN_PROGRESS") || next.equals("CANCELED"))) return;
+        (next.equals("IN_PROGRESS") || next.equals("CANCELED"))) return;
 
-    if (current.equals("IN_PROGRESS") &&
-            next.equals("COMPLETED")) return;
+    if (current.equals("IN_PROGRESS") && next.equals("COMPLETED")) return;
 
     throw new InvalidOrderStatusTransitionException(
-            "Invalid order status transition: " + current + " → " + next
+        "Invalid order status transition: " + current + " → " + next
     );
 }
+
+
 
 }

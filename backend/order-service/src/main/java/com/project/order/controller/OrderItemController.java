@@ -96,7 +96,7 @@ public class OrderItemController {
             description = """
                     Adds a new item to an order.
                     Rules:
-                    - Allowed only in SUBMITTED or READY_FOR_PAYMENT
+                    - Allowed only in SUBMITTED status
                     - Purchase products allowed once
                     - Olive press allowed multiple times with different olive types
                     """

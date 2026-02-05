@@ -1,8 +1,6 @@
 package com.project.order.controller;
 
-import com.project.order.dto.OrderResponse;
 import com.project.order.dto.OrderStatusResponse;
-import com.project.order.dto.UpdateOrderStatusRequest;
 import com.project.order.service.OrderStatusService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -13,7 +11,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -79,7 +76,6 @@ public class OrderStatusController {
                                     value = """
                                     [
                                       {"id": 1, "statusName": "SUBMITTED"},
-                                      {"id": 2, "statusName": "READY_FOR_PAYMENT"},
                                       {"id": 3, "statusName": "PAID"},
                                       {"id": 4, "statusName": "IN_PROGRESS"},
                                       {"id": 5, "statusName": "COMPLETED"},
@@ -111,7 +107,6 @@ public class OrderStatusController {
                                     value = """
                                     [
                                       "SUBMITTED",
-                                      "READY_FOR_PAYMENT",
                                       "PAID",
                                       "IN_PROGRESS",
                                       "COMPLETED",
@@ -133,37 +128,4 @@ public class OrderStatusController {
     }
 
 
-      // ================= UPDATE STATUS =================
-    @PatchMapping("/{id}/status")
-    @PreAuthorize("hasAnyRole('ADMIN','RECEPTIONIST','ACCOUNTANT','TECHNICIAN') and hasAuthority('ORDER_UPDATE_STATUS')")
-    @Operation(
-            summary = "Update order status",
-            description = "Updates order status (e.g., SUBMITTED -> READY_FOR_PAYMENT -> PAID -> IN_PROGRESS -> COMPLETED)."
-    )
-    @io.swagger.v3.oas.annotations.parameters.RequestBody(
-            required = true,
-            description = "Status update payload",
-            content = @Content(
-                    examples = @ExampleObject(
-                            name = "UpdateOrderStatusRequest",
-                            value = """
-                            { "status": "READY_FOR_PAYMENT" }
-                            """
-                    )
-            )
-    )
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Status updated successfully",
-                    content = @Content(schema = @Schema(implementation = OrderResponse.class))),
-            @ApiResponse(responseCode = "400", description = "Validation error"),
-            @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "403", description = "Forbidden (missing ORDER_UPDATE_STATUS)"),
-            @ApiResponse(responseCode = "404", description = "Order/Status not found")
-    })
-    public ResponseEntity<OrderResponse> updateStatus(
-            @PathVariable @Min(value = 1, message = "Order ID must be greater than 0") Long id,
-            @Valid @RequestBody UpdateOrderStatusRequest request
-    ) {
-        return ResponseEntity.ok(orderStatusService.updateStatus(id, request));
-    }
 }

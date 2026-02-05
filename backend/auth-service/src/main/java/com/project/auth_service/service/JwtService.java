@@ -73,6 +73,19 @@ public class JwtService {
         claims.put(JTI, UUID.randomUUID().toString());
         return createToken(claims, user.getUsername(), accessExpirationMs);
     }
+public String generateAccessToken(
+        String username,
+        Collection<String> authorities,
+        Long employeeId
+) {
+    Map<String, Object> claims = new HashMap<>();
+
+    claims.put(AUTHORITIES_CLAIM, authorities);
+    claims.put("employeeId", employeeId);
+    claims.put(JTI, UUID.randomUUID().toString());
+
+    return createToken(claims, username, accessExpirationMs);
+}
 
     /** يولد Refresh Token أطول عمرًا — بدون authorities (يكفي subject) */
     public String generateRefreshToken(UserDetails user) {

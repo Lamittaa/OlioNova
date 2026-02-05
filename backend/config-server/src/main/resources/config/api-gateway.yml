@@ -30,12 +30,13 @@ spring:
           predicates:
             - Path=/api/orders/**,/api/products/**,/api/order-statuses/**
 
-        # PAYMENT-SERVICE
+         # PAYMENT-SERVICE
         - id: payment-api
           uri: lb://PAYMENT-SERVICE
           predicates:
-            - Path=/api/payments/**
-
+          - Path=/api/payments/**,/api/payment-reports/**
+         
+          
         # PRODUCTIONSTAGES-SERVICE
         - id: productionStages-api
           uri: lb://PRODUCTIONSTAGES-SERVICE

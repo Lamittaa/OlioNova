@@ -13,8 +13,4 @@ public class CreatePaymentRequest {
 
     @NotNull
     private Long orderId;
-
-    @NotNull
-    @Positive
-    private BigDecimal totalPrice;
 }

@@ -212,16 +212,16 @@ public class OrderItemService {
             throw new ResourceNotFoundException("Order not found with id: " + orderId);
         }
     }
+private void ensureOrderEditable(Order order) {
+    String status = order.getStatus().getStatusName().toUpperCase();
 
-    private void ensureOrderEditable(Order order) {
-        String status = order.getStatus().getStatusName().toUpperCase();
-
-        if (!status.equals("SUBMITTED") && !status.equals("READY_FOR_PAYMENT")) {
-            throw new OrderNotEditableException(
-                    "Order items cannot be modified in status: " + status
-            );
-        }
+    if (!status.equals("SUBMITTED")) {
+        throw new OrderNotEditableException(
+                "Order items cannot be modified in status: " + status
+        );
     }
+}
+
 
     private void ensureOrderInSubmittedOnly(Order order) {
         String status = order.getStatus().getStatusName().toUpperCase();
