@@ -117,11 +117,7 @@ public class ProductLookupService {
         productRepo.save(product);
     }
 
-    // ✅ GET /api/products/names (active only)
-    @Transactional(readOnly = true)
-    public List<String> getProductNames() {
-        return productRepo.findAllActiveProductNames();
-    }
+
 
     // ✅ PATCH /api/products/{id}/activate
     public void activateProduct(Long id) {

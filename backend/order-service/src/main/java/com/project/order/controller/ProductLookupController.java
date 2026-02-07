@@ -314,24 +314,6 @@ public class ProductLookupController {
         return ResponseEntity.noContent().build();
     }
 
-    // ================= NAMES ONLY =================
-    @GetMapping("/names")
-    @PreAuthorize("hasAnyRole('ADMIN','RECEPTIONIST','ACCOUNTANT') and hasAuthority('PRODUCT_READ')")
-    @Operation(summary = "Get product names only (active only)", description = "Returns only active product names as strings")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Names returned successfully",
-                    content = @Content(
-                            array = @ArraySchema(schema = @Schema(implementation = String.class)),
-                            examples = @ExampleObject(value = """
-                            ["Olive Press Service","Jift Bag","Gallon 16L"]
-                            """)
-                    )),
-            @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "403", description = "Forbidden")
-    })
-    public ResponseEntity<List<String>> getProductNames() {
-        return ResponseEntity.ok(productService.getProductNames());
-    }
 
     // ================= ACTIVATE =================
     @PatchMapping("/{id}/activate")
