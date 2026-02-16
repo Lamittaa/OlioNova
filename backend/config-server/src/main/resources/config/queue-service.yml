@@ -1,0 +1,39 @@
+server:
+  port: 9040
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/queuedb
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+    show-sql: true
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${server.port}
+
+security:
+  jwt:
+    secret: "MySuperSecretKeyForJwt1234567890MyExtra"
+
+# (اختياري) Swagger لكل خدمة
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /docs

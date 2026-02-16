@@ -3,6 +3,7 @@ package com.project.payment.service;
 import lombok.extern.slf4j.Slf4j;
 
 import com.project.payment.client.OrderClient;
+import com.project.payment.client.QueueClient;
 import com.project.payment.dto.CreatePaymentRequest;
 import com.project.payment.dto.DailyPaymentReportResponse;
 import com.project.payment.dto.EmployeePaymentSummary;
@@ -36,6 +37,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 @Transactional
 public class PaymentService {
+private final QueueClient queueClient;
 
     private final PaymentRepository paymentRepository;
     private final OrderClient orderClient;
@@ -43,77 +45,86 @@ public class PaymentService {
     // =========================================================
     // 1️⃣ CREATE PAYMENT
     // =========================================================
-    public PaymentResponse createCashPayment(CreatePaymentRequest request) {
+public PaymentResponse createCashPayment(CreatePaymentRequest request) {
 
-        // ---------- AUTH ----------
-        JwtAuthenticationToken auth =
-                (JwtAuthenticationToken) SecurityContextHolder
-                        .getContext()
-                        .getAuthentication();
+    // ---------- AUTH ----------
+    JwtAuthenticationToken auth =
+            (JwtAuthenticationToken) SecurityContextHolder
+                    .getContext()
+                    .getAuthentication();
 
-        Long employeeId = auth.getToken().getClaim("employeeId");
+    Long employeeId = auth.getToken().getClaim("employeeId");
 
-        if (employeeId == null) {
-            throw new BusinessException("employeeId missing in authentication token");
-        }
-
-        // ---------- FETCH ORDER ----------
-        OrderSummaryResponse order;
-        try {
-            order = orderClient.getOrderById(request.getOrderId());
-        } catch (FeignException.NotFound e) {
-            throw new ResourceNotFoundException(
-                    "Order not found with id: " + request.getOrderId()
-            );
-        }
-
-        Long orderId = order.id();
-
-        // ---------- PREVENT DOUBLE PAYMENT ----------
-        if (paymentRepository.findByOrderId(orderId).isPresent()) {
-            throw new PaymentAlreadyExistsException(
-                    "Payment already exists for orderId: " + orderId
-            );
-        }
-
-        // ---------- VALIDATE ORDER STATUS ----------
-        if (!"SUBMITTED".equals(order.status())) {
-            throw new OrderNotEditableException(
-                    "Order cannot be paid in status: " + order.status()
-            );
-        }
-
-        // ---------- CREATE PAYMENT ----------
-        Payment payment = new Payment();
-        payment.setOrderId(orderId);
-        payment.setTotalPrice(order.totalPrice());
-        payment.setPaymentType(PaymentType.CASH);
-        payment.setPaymentDate(LocalDateTime.now());
-        payment.setEmployeeId(employeeId);
-
-        Payment saved = paymentRepository.save(payment);
-
-        // ---------- UPDATE ORDER STATUS ----------
-        try {
-            orderClient.updateOrderStatus(
-                    orderId,
-                    Map.of("status", "PAID")
-            );
-        } catch (FeignException e) {
-
-            // خطأ business (status غير مسموح)
-            if (e.status() == 400 || e.status() == 409) {
-                throw new BusinessException(
-                        "Order cannot be paid in its current status"
-                );
-            }
-
-            // أي شيء ثاني = مشكلة حقيقية
-            throw e;
-        }
-
-        return map(saved);
+    if (employeeId == null) {
+        throw new BusinessException("employeeId missing in authentication token");
     }
+
+    // ---------- FETCH ORDER ----------
+    OrderSummaryResponse order;
+    try {
+        order = orderClient.getOrderById(request.getOrderId());
+    } catch (FeignException.NotFound e) {
+        throw new ResourceNotFoundException(
+                "Order not found with id: " + request.getOrderId()
+        );
+    }
+
+    Long orderId = order.id();
+
+    // ---------- PREVENT DOUBLE PAYMENT ----------
+    if (paymentRepository.findByOrderId(orderId).isPresent()) {
+        throw new PaymentAlreadyExistsException(
+                "Payment already exists for orderId: " + orderId
+        );
+    }
+
+    // ---------- VALIDATE ORDER STATUS ----------
+    if (!"SUBMITTED".equals(order.status())) {
+        throw new OrderNotEditableException(
+                "Order cannot be paid in status: " + order.status()
+        );
+    }
+
+    // ---------- CREATE PAYMENT ----------
+    Payment payment = new Payment();
+    payment.setOrderId(orderId);
+    payment.setTotalPrice(order.totalPrice());
+    payment.setPaymentType(PaymentType.CASH);
+    payment.setPaymentDate(LocalDateTime.now());
+    payment.setEmployeeId(employeeId);
+
+    Payment saved = paymentRepository.save(payment);
+
+    // ---------- UPDATE ORDER STATUS ----------
+    try {
+        orderClient.updateOrderStatus(
+                orderId,
+                Map.of("status", "PAID")
+        );
+    } catch (FeignException e) {
+
+        if (e.status() == 400 || e.status() == 409) {
+            throw new BusinessException(
+                    "Order cannot be paid in its current status"
+            );
+        }
+
+        throw e;
+    }
+
+    // ---------- ADD TO PRODUCTION QUEUE ----------
+    try {
+        queueClient.addToProduction(orderId);
+    } catch (Exception e) {
+        log.error("Failed to add order to production queue", e);
+        throw new BusinessException(
+                "Payment succeeded but failed to add to production queue"
+        );
+    }
+
+    return map(saved);
+}
+
 
     // =========================================================
     // 2️⃣ GET PAYMENT BY ID

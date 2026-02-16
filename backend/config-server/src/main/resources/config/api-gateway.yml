@@ -42,6 +42,13 @@ spring:
           uri: lb://PRODUCTIONSTAGES-SERVICE
           predicates:
             - Path=/api/production-stages/**,/api/stage-types/**
+        
+        # QUEUE-SERVICE
+        - id: queue-api
+          uri: lb://QUEUE-SERVICE
+          predicates:
+            - Path=/api/queue/**
+
 
 security:
   jwt:
