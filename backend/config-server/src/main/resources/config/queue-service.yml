@@ -2,6 +2,9 @@ server:
   port: 9040
 
 spring:
+  application:
+    name: queue-service
+
   datasource:
     url: jdbc:postgresql://localhost:5432/queuedb
     username: postgres
@@ -17,6 +20,11 @@ spring:
         format_sql: true
     show-sql: true
 
+  cloud:
+    openfeign:
+      discovery:
+        enabled: true
+
 eureka:
   client:
     service-url:
@@ -31,7 +39,6 @@ security:
   jwt:
     secret: "MySuperSecretKeyForJwt1234567890MyExtra"
 
-# (اختياري) Swagger لكل خدمة
 springdoc:
   api-docs:
     path: /v3/api-docs

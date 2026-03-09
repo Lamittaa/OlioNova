@@ -1,11 +1,14 @@
 package com.project.queue_service.controller;
+
 import com.project.queue_service.dto.QueueResponseDto;
 import com.project.queue_service.model.QueueTicket;
+import com.project.queue_service.model.QueueType;
 import com.project.queue_service.model.TellerAction;
 import com.project.queue_service.service.QueueManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 @RestController
 @RequestMapping("/api/queues")
@@ -14,42 +17,50 @@ public class QueueController {
 
     private final QueueManager queueManager;
 
-    // إصدار رقم جديد
+    // ================= ISSUE TICKET =================
+    @PreAuthorize("hasAnyRole('RECEPTIONIST','ADMIN')")
     @PostMapping("/{queueType}/tickets")
     @ResponseStatus(HttpStatus.CREATED)
-    public QueueTicket issueTicket(@PathVariable String queueType) {
+    public QueueTicket issueTicket(
+            @PathVariable QueueType queueType) {
         return queueManager.issueTicket(queueType);
     }
 
-    // NEXT أو SKIP
+    // ================= ADVANCE =================
+    @PreAuthorize("hasAnyRole('ACCOUNTANT','TECHNICIAN','ADMIN')")
     @PostMapping("/{queueType}/advance")
     public QueueTicket advanceQueue(
-            @PathVariable String queueType,
-            @RequestParam Long tellerId,
-            @RequestParam TellerAction action
-    ) {
-        return queueManager.advanceQueue(queueType, tellerId, action);
+            @PathVariable QueueType queueType,
+            @RequestParam TellerAction action) {
+
+        return queueManager.advanceQueue(queueType, action);
     }
 
-    // عرض حالة الطابور
+    // ================= STATUS =================
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/{queueType}/status")
-    public QueueResponseDto getStatus(@PathVariable String queueType) {
+    public QueueResponseDto getStatus(
+            @PathVariable QueueType queueType) {
         return queueManager.getQueueStatus(queueType);
     }
 
-@PostMapping("/production")
-@ResponseStatus(HttpStatus.CREATED)
-public QueueTicket addToProduction(@RequestParam Long orderId) {
-    return queueManager.addToProduction(orderId);
+    // ================= ADD TO PRODUCTION =================
+    @PreAuthorize("hasAnyRole('ACCOUNTANT','ADMIN')")
+  @PostMapping("/production")
+public QueueTicket addToProduction(
+        @RequestParam Long orderId,
+        @RequestParam Long orderItemId) {
+
+    return queueManager.addToProduction(orderId, orderItemId);
 }
 
-@PostMapping("/{queueType}/complete")
-public QueueTicket completeTicket(
-        @PathVariable String queueType,
-        @RequestParam Long ticketId
-) {
-    return queueManager.completeTicket(queueType, ticketId);
-}
-
+    // ================= COMPLETE =================
+    @PreAuthorize("hasAnyRole('TECHNICIAN','ADMIN')")
+    @PostMapping("/{queueType}/complete")
+    public QueueTicket completeTicket(
+            @PathVariable QueueType queueType,
+            @RequestParam Long ticketId) {
+        return queueManager.completeTicket(queueType, ticketId);
+    }
 
 }

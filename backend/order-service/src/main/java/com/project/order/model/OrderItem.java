@@ -24,7 +24,6 @@ public class OrderItem {
     @Column(name = "product_id", nullable = false)
     private Long productId;
 
-  
     @Column(name = "product_name", length = 100, nullable = false)
     private String productName;
 
@@ -48,6 +47,10 @@ public class OrderItem {
 
     @Column(name = "note", length = 255)
     private String note;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false )
+    @JoinColumn(name = "status_id", nullable = false)
+    private OrderStatus status;
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;

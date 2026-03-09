@@ -30,72 +30,85 @@ public class OrderStatusService {
 
     @Transactional(readOnly = true)
     public OrderStatusResponse getStatusById(Long id) {
+
         OrderStatus status = statusRepo.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Order status not found with id: " + id));
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Order status not found with id: " + id));
+
         return statusMapper.toOrderStatusResponse(status);
     }
 
     @Transactional(readOnly = true)
     public List<OrderStatusResponse> getAllStatuses() {
+
         return statusRepo.findAll()
                 .stream()
                 .map(statusMapper::toOrderStatusResponse)
                 .toList();
     }
+
     private OrderStatus getStatusOrThrow(String statusName) {
+
         return statusRepo.findByStatusNameIgnoreCase(statusName)
-                .orElseThrow(() -> new ResourceNotFoundException("OrderStatus not found: " + statusName));
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "OrderStatus not found: " + statusName));
     }
-    // ===================== 7) UPDATE STATUS =====================
-    // PATCH /api/orders/{id}/status
-   public OrderResponse updateStatus(Long orderId, UpdateOrderStatusRequest request) {
 
-    Order order = orderRepo.findById(orderId)
-            .orElseThrow(() -> new ResourceNotFoundException(
-                    "Order not found with id: " + orderId));
+    // =====================================================
+    // UPDATE ORDER STATUS
+    // =====================================================
+    public OrderResponse updateStatus(Long orderId, UpdateOrderStatusRequest request) {
 
-    String currentStatus = order.getStatus().getStatusName();
-    OrderStatus newStatus = getStatusOrThrow(request.getStatus());
-    String nextStatus = newStatus.getStatusName();
+        Order order = orderRepo.findById(orderId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Order not found with id: " + orderId));
 
-    // ⭐ التحقق الأساسي
-    validateStatusTransition(currentStatus, nextStatus);
+        String currentStatus = order.getStatus().getStatusName();
 
-    order.setStatus(newStatus);
-    order.setUpdatedAt(LocalDateTime.now());
+        OrderStatus newStatus = getStatusOrThrow(request.getStatus());
+        String nextStatus = newStatus.getStatusName();
 
-    return orderMapper.toOrderResponse(orderRepo.save(order));
-}
+        validateStatusTransition(currentStatus, nextStatus);
 
+        order.setStatus(newStatus);
+        order.setUpdatedAt(LocalDateTime.now());
 
+        return orderMapper.toOrderResponse(orderRepo.save(order));
+    }
 
+    // =====================================================
+    // STATUS TRANSITION VALIDATION
+    // =====================================================
+    private void validateStatusTransition(String current, String next) {
 
-private void validateStatusTransition(String current, String next) {
+        current = current.trim().toUpperCase();
+        next = next.trim().toUpperCase();
 
-    current = current.trim().toUpperCase();
-    next = next.trim().toUpperCase();
+        // ================= SUBMITTED =================
+        if (current.equals("SUBMITTED") &&
+                (next.equals("PAID") || next.equals("CANCELED"))) {
+            return;
+        }
 
-    // SUBMITTED
-    if (current.equals("SUBMITTED") &&
-        (next.equals("PAID") || next.equals("CANCELED"))) return;
+        // ================= PAID =================
+        if (current.equals("PAID") &&
+                (next.equals("READY_FOR_PICKUP") ||
+                        next.equals("COMPLETED") ||
+                        next.equals("REFUNDED"))) {
+            return;
+        }
 
-    // PAID
-    if (current.equals("PAID") &&
-        (next.equals("IN_PROGRESS") || next.equals("REFUNDED"))) return;
+        // ================= READY_FOR_PICKUP =================
+        if (current.equals("READY_FOR_PICKUP") &&
+                next.equals("COMPLETED")) {
+            return;
+        }
 
-    // IN_PROGRESS
-    if (current.equals("IN_PROGRESS") &&
-        next.equals("READY_FOR_PACKING")) return;
-
-    // READY_FOR_PACKING
-    if (current.equals("READY_FOR_PACKING") &&
-        next.equals("COMPLETED")) return;
-
-    throw new InvalidOrderStatusTransitionException(
-        "Invalid order status transition: " + current + " → " + next
-    );
-}
-
-
-
+        throw new InvalidOrderStatusTransitionException(
+                "Invalid order status transition: "
+                        + current + " → " + next);
+    }
 }

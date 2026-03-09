@@ -1,6 +1,8 @@
 package com.project.queue_service.repository;
 
 import com.project.queue_service.model.QueueCounter;
+import com.project.queue_service.model.QueueType;
+
 import jakarta.persistence.LockModeType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -16,6 +18,5 @@ import java.util.Optional;
 public interface QueueCounterRepo extends JpaRepository<QueueCounter, Long> {
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    Optional<QueueCounter> findByQueueTypeAndQueueDate(String queueType, LocalDate queueDate);
-
+    Optional<QueueCounter> findByQueueTypeAndQueueDate(QueueType queueType, LocalDate queueDate);
 }

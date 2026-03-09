@@ -7,6 +7,7 @@ import com.project.order.dto.OrderResponse;
 import com.project.order.exception.InvalidOrderItemsException;
 import com.project.order.exception.InvalidOrderStatusTransitionException;
 import com.project.order.exception.ResourceNotFoundException;
+import com.project.order.mapper.OrderItemMapper;
 import com.project.order.mapper.OrderMapper;
 import com.project.order.model.Order;
 import com.project.order.model.OrderItem;
@@ -36,7 +37,7 @@ public class OrderService {
     private final OrderStatusRepo statusRepo;
     private final CustomerClient customerClient;
     private final OrderMapper orderMapper;
-
+    private final OrderItemMapper orderItemMapper;
     // ================= CREATE =================
     public OrderResponse createOrder(CreateOrderRequest request) {
 
@@ -80,50 +81,74 @@ public class OrderService {
     }
 
     // ================= CANCEL =================
-    public void cancelOrder(Long id) {
+   public void cancelOrder(Long id) {
 
-        Order order = orderRepo.findById(id)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("Order not found with id: " + id));
+    Order order = orderRepo.findById(id)
+            .orElseThrow(() ->
+                    new ResourceNotFoundException("Order not found with id: " + id));
 
-        order.setStatus(getStatus("CANCELED"));
-        order.setUpdatedAt(LocalDateTime.now());
-    }
+    OrderStatus canceled = getStatus("CANCELED");
+
+    order.setStatus(canceled);
+    order.setUpdatedAt(LocalDateTime.now());
+
+    order.getItems().forEach(item -> {
+        item.setStatus(canceled);
+        item.setUpdatedAt(LocalDateTime.now());
+    });
+}
 
     // ================= PAY (✅ FIXED HERE) =================
-    public void payOrder(Long orderId) {
+public void payOrder(Long orderId) {
 
-        Order order = orderRepo.findById(orderId)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Order not found with id: " + orderId
-                        )
-                );
-
-        String status = order.getStatus().getStatusName();
-
-        // ❌ ممنوع الدفع إذا مدفوع
-        if ("PAID".equals(status)) {
-            throw new InvalidOrderStatusTransitionException(
-                    "Order already paid"
+    Order order = orderRepo.findById(orderId)
+            .orElseThrow(() ->
+                    new ResourceNotFoundException(
+                            "Order not found with id: " + orderId
+                    )
             );
-        }
 
-        // ❌ مسموح الدفع فقط من SUBMITTED
-        if (!"SUBMITTED".equals(status)) {
-            throw new InvalidOrderStatusTransitionException(
-                    "Order cannot be paid in status: " + status
-            );
-        }
+    String status = order.getStatus().getStatusName();
 
-        OrderStatus paidStatus = getStatus("PAID");
-
-        order.setStatus(paidStatus);
-        order.setUpdatedAt(LocalDateTime.now());
-
-        orderRepo.save(order);
+    // ❌ مسموح الدفع فقط من SUBMITTED
+    if (!"SUBMITTED".equalsIgnoreCase(status)) {
+        throw new InvalidOrderStatusTransitionException(
+                "Order cannot be paid in status: " + status
+        );
     }
 
+    // 🔥 الجديد هنا — قبل الدفع
+    boolean hasRefundedItem = order.getItems().stream()
+            .anyMatch(i ->
+                    i.getStatus() != null &&
+                    i.getStatus().getStatusName()
+                            .equalsIgnoreCase("REFUNDED")
+            );
+
+    if (hasRefundedItem) {
+        throw new InvalidOrderStatusTransitionException(
+                "Cannot pay order with refunded items"
+        );
+    }
+
+    OrderStatus paidStatus = getStatus("PAID");
+
+    // 1️⃣ تحديث الطلب
+    order.setStatus(paidStatus);
+    order.setUpdatedAt(LocalDateTime.now());
+
+    // 2️⃣ تحديث كل العناصر
+    order.getItems().forEach(item -> {
+        if (item.getStatus().getStatusName()
+                .equalsIgnoreCase("SUBMITTED")) {
+
+            item.setStatus(paidStatus);
+            item.setUpdatedAt(LocalDateTime.now());
+        }
+    });
+
+    orderRepo.save(order);
+}
     // ================= RESPONSE BUILDER =================
     private OrderResponse buildOrderResponse(Order order) {
 
@@ -132,7 +157,7 @@ public class OrderService {
         response.setItems(
                 order.getItems()
                         .stream()
-                        .map(orderMapper::mapItem)
+                         .map(orderItemMapper::toResponse)
                         .toList()
         );
 
@@ -229,7 +254,7 @@ public class OrderService {
         BigDecimal price = computePrice(product, isMember);
         item.setPrice(price);
         item.setTotalPrice(price.multiply(dto.getQuantity()));
-
+        item.setStatus(getStatus("SUBMITTED"));
         item.setCreatedAt(LocalDateTime.now());
 
         return item;

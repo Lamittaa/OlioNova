@@ -1,7 +1,7 @@
 package com.project.queue_service.repository;
 
-
 import com.project.queue_service.model.QueueTicket;
+import com.project.queue_service.model.QueueType;
 import com.project.queue_service.model.TicketStatus;
 
 import jakarta.persistence.LockModeType;
@@ -19,7 +19,7 @@ public interface QueueTicketRepo extends JpaRepository<QueueTicket, Long> {
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<QueueTicket> findFirstByQueueTypeAndTicketStatusOrderByTicketNumberAsc(
-            String queueType,
+            QueueType queueType,
             TicketStatus ticketStatus
     );
 
@@ -30,15 +30,25 @@ public interface QueueTicketRepo extends JpaRepository<QueueTicket, Long> {
     );
 
     List<QueueTicket> findAllByQueueTypeAndQueueDateAndTicketStatusIn(
-            String queueType,
+            QueueType queueType,
             LocalDate queueDate,
             List<TicketStatus> ticketStatusList
     );
 
-    default Optional<QueueTicket> findNextWaiting(String queueType) {
+    default Optional<QueueTicket> findNextWaiting(QueueType queueType) {
         return findFirstByQueueTypeAndTicketStatusOrderByTicketNumberAsc(
                 queueType,
                 TicketStatus.WAITING
         );
     }
+
+
+    boolean existsByOrderItemIdAndQueueType(
+            Long orderItemId,
+            QueueType queueType
+    );
+    boolean existsByOrderIdAndQueueType(
+        Long orderId,
+        QueueType queueType
+);
 }

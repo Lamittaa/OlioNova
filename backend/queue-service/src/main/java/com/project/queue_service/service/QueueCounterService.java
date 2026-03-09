@@ -1,6 +1,7 @@
 package com.project.queue_service.service;
 
 import com.project.queue_service.model.QueueCounter;
+import com.project.queue_service.model.QueueType;
 import com.project.queue_service.repository.QueueCounterRepo;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,20 +20,27 @@ public class QueueCounterService {
     private final QueueCounterCreator queueCounterCreator;
 
     @Transactional
-    public Integer getAndIncrementTicketNumber(String queueType) {
+    public Integer getAndIncrementTicketNumber(QueueType queueType) {
+
         LocalDate today = LocalDate.now();
 
-        QueueCounter counter = queueCounterRepo.findByQueueTypeAndQueueDate(queueType, today)
-                .orElseGet(() -> {
-                    try {
-                        queueCounterCreator.createCounterRow(queueType, today);
-                    } catch (DataIntegrityViolationException ex) {
-                    }
-                    return queueCounterRepo.findByQueueTypeAndQueueDate(queueType, today)
-                            .orElseThrow(() ->
-                                    new IllegalStateException("Unable to find queue counter or create a new one!"));
-                });
+        QueueCounter counter =
+                queueCounterRepo.findByQueueTypeAndQueueDate(queueType, today)
+                        .orElseGet(() -> {
+                            try {
+                                queueCounterCreator.createCounterRow(queueType, today);
+                            } catch (DataIntegrityViolationException ex) {
+                                log.warn("Counter already created by another transaction");
+                            }
 
+                            return queueCounterRepo
+                                    .findByQueueTypeAndQueueDate(queueType, today)
+                                    .orElseThrow(() ->
+                                            new IllegalStateException(
+                                                    "Unable to find queue counter or create a new one!"
+                                            )
+                                    );
+                        });
 
         int ticketNumber = counter.getNextTicketNumber();
 
@@ -41,5 +49,4 @@ public class QueueCounterService {
 
         return ticketNumber;
     }
-
 }

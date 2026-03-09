@@ -114,7 +114,7 @@ public PaymentResponse createCashPayment(CreatePaymentRequest request) {
 
     // ---------- ADD TO PRODUCTION QUEUE ----------
     try {
-        queueClient.addToProduction(orderId);
+        
     } catch (Exception e) {
         log.error("Failed to add order to production queue", e);
         throw new BusinessException(

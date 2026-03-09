@@ -12,9 +12,11 @@ import com.project.order.mapper.OrderItemMapper;
 import com.project.order.mapper.OrderMapper;
 import com.project.order.model.Order;
 import com.project.order.model.OrderItem;
+import com.project.order.model.OrderStatus;
 import com.project.order.model.ProductLookup;
 import com.project.order.repository.OrderItemRepo;
 import com.project.order.repository.OrderRepo;
+import com.project.order.repository.OrderStatusRepo;
 import com.project.order.repository.ProductLookupRepo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -34,7 +36,7 @@ public class OrderItemService {
     private final OrderItemRepo itemRepo;
     private final ProductLookupRepo productRepo;
     private final CustomerClient customerClient;
-
+    private final OrderStatusRepo statusRepo;
     private final OrderItemMapper orderItemMapper; // 🔥 مهم
     private final OrderMapper orderMapper;         // فقط لـ OrderResponse
 
@@ -114,6 +116,7 @@ public class OrderItemService {
         );
 
         item.setCreatedAt(LocalDateTime.now());
+        item.setStatus(getStatusOrThrow("SUBMITTED"));
 
         itemRepo.save(item);
 
@@ -337,4 +340,141 @@ private void ensureOrderEditable(Order order) {
     }
 }
 
+public void updateOrderItemStatus(Long orderItemId, String newStatusName) {
+
+    OrderItem item = itemRepo.findById(orderItemId)
+            .orElseThrow(() ->
+                    new ResourceNotFoundException("OrderItem not found"));
+
+    OrderStatus newStatus = getStatusOrThrow(newStatusName);
+
+    // 🔥 VALIDATE TRANSITION
+    validateItemTransition(item, newStatusName);
+
+    item.setStatus(newStatus);
+    item.setUpdatedAt(LocalDateTime.now());
+    itemRepo.save(item);
+
+    // 🔥 بعد كل تعديل → نعيد حساب حالة الطلب
+    recalculateOrderStatus(item.getOrder().getId());
+}
+private OrderStatus getStatusOrThrow(String statusName) {
+
+    return statusRepo
+            .findByStatusNameIgnoreCase(statusName)
+            .orElseThrow(() ->
+                    new ResourceNotFoundException(
+                            "OrderStatus not found: " + statusName
+                    )
+            );
+}
+private void validateItemTransition(OrderItem item, String nextStatus) {
+
+    String current = item.getStatus().getStatusName().toUpperCase();
+    String next = nextStatus.toUpperCase();
+    String type = item.getProductType().toUpperCase();
+
+    // ================= PURCHASE =================
+    if (type.equals("PURCHASE")) {
+
+        if (current.equals("PAID") && next.equals("REFUNDED")) return;
+        if (current.equals("PAID") && next.equals("COMPLETED")) return;
+
+        throw new BusinessRuleViolationException(
+                "Invalid status change for PURCHASE item"
+        );
+    }
+
+    // ================= SERVICE =================
+    if (type.equals("SERVICE")) {
+
+        // 🔥 Refund مسموح فقط قبل دخول الإنتاج
+        if (current.equals("PAID") && next.equals("REFUNDED")) return;
+
+        if (current.equals("PAID") && next.equals("IN_PRODUCTION")) return;
+        if (current.equals("IN_PRODUCTION") && next.equals("IN_PROGRESS")) return;
+        if (current.equals("IN_PROGRESS") && next.equals("READY_FOR_PICKUP")) return;
+        if (current.equals("READY_FOR_PICKUP") && next.equals("COMPLETED")) return;
+
+        throw new BusinessRuleViolationException(
+                "Invalid status change for SERVICE item"
+        );
+    }
+}
+
+private void recalculateOrderStatus(Long orderId) {
+
+    Order order = orderRepo.findById(orderId)
+            .orElseThrow(() ->
+                    new ResourceNotFoundException("Order not found"));
+
+    List<OrderItem> items = itemRepo.findByOrderId(orderId);
+
+    if (items.isEmpty()) return;
+
+    long total = items.size();
+
+    long refundedCount = items.stream()
+            .filter(i -> i.getStatus().getStatusName().equalsIgnoreCase("REFUNDED"))
+            .count();
+
+    long completedCount = items.stream()
+            .filter(i -> i.getStatus().getStatusName().equalsIgnoreCase("COMPLETED"))
+            .count();
+
+    boolean anyInProgress = items.stream()
+            .anyMatch(i -> i.getStatus().getStatusName().equalsIgnoreCase("IN_PROGRESS"));
+
+    boolean anyInProduction = items.stream()
+            .anyMatch(i -> i.getStatus().getStatusName().equalsIgnoreCase("IN_PRODUCTION"));
+
+    boolean allReadyForPickup = items.stream()
+            .filter(i -> i.getProductType().equalsIgnoreCase("SERVICE"))
+            .allMatch(i ->
+                    i.getStatus().getStatusName().equalsIgnoreCase("READY_FOR_PICKUP")
+            );
+
+    boolean allPaid = items.stream()
+            .allMatch(i ->
+                    i.getStatus().getStatusName().equalsIgnoreCase("PAID")
+            );
+
+    // ================= 1️⃣ ALL REFUNDED =================
+    if (refundedCount == total) {
+        order.setStatus(getStatusOrThrow("REFUNDED"));
+    }
+
+    // ================= 2️⃣ ANY IN_PROGRESS =================
+    else if (anyInProgress) {
+        order.setStatus(getStatusOrThrow("IN_PROGRESS"));
+    }
+
+    // ================= 3️⃣ ANY IN_PRODUCTION =================
+    else if (anyInProduction) {
+        order.setStatus(getStatusOrThrow("IN_PRODUCTION"));
+    }
+
+    // ================= 4️⃣ ALL SERVICE READY =================
+    else if (allReadyForPickup) {
+        order.setStatus(getStatusOrThrow("READY_FOR_PICKUP"));
+    }
+
+    // ================= 5️⃣ ALL COMPLETED =================
+    else if (completedCount == total) {
+        order.setStatus(getStatusOrThrow("COMPLETED"));
+    }
+
+    // ================= 6️⃣ ALL PAID =================
+    else if (allPaid) {
+        order.setStatus(getStatusOrThrow("PAID"));
+    }
+
+    // ================= DEFAULT =================
+    else {
+        order.setStatus(getStatusOrThrow("SUBMITTED"));
+    }
+
+    order.setUpdatedAt(LocalDateTime.now());
+    orderRepo.save(order);
+}
 }

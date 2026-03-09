@@ -30,12 +30,19 @@ public class OrderItemMapper {
     }
 
     private void mapBase(OrderItem item, OrderItemResponse dto) {
-        dto.setId(item.getId());
-        dto.setProductId(item.getProductId());
-        dto.setProductName(item.getProductName());
-        dto.setProductType(item.getProductType());
-        dto.setQuantity(item.getQuantity());
-        dto.setPrice(item.getPrice());
-        dto.setTotalPrice(item.getTotalPrice());
-    }
+    dto.setId(item.getId());
+    dto.setProductId(item.getProductId());
+    dto.setProductName(item.getProductName());
+    dto.setProductType(item.getProductType());
+    dto.setQuantity(item.getQuantity());
+    dto.setPrice(item.getPrice());
+    dto.setTotalPrice(item.getTotalPrice());
+
+    // 🔥 الجديد
+    dto.setStatus(
+            item.getStatus() != null
+                    ? item.getStatus().getStatusName()
+                    : null
+    );
+}
 }

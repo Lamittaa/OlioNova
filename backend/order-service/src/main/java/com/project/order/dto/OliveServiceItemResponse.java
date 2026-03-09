@@ -10,6 +10,7 @@ public class OliveServiceItemResponse extends OrderItemResponse {
     private String oliveType;
     private Integer bagsCount;
     private String note;
+ private String status;  
 
     
 }
