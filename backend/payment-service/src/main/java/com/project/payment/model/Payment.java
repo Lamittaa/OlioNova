@@ -31,5 +31,5 @@ public class Payment {
     private LocalDateTime paymentDate;
 
     @Column(nullable = false)
-    private Long employeeId;
+    private Long userId;
 }

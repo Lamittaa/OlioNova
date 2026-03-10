@@ -222,6 +222,41 @@ public ResponseEntity<ErrorResponse> handleCustomerNotFound(
         );
     }
 
+    @ExceptionHandler(ServiceUnavailableException.class)
+public ResponseEntity<ErrorResponse> handleServiceUnavailable(
+        ServiceUnavailableException ex,
+        HttpServletRequest request
+) {
+
+    return buildError(
+            HttpStatus.SERVICE_UNAVAILABLE,
+            request,
+            ex.getErrorCode().toString(),
+            ex.getMessage(),
+            null
+    );
+}
+private ResponseEntity<ErrorResponse> buildError(
+        HttpStatus status,
+        HttpServletRequest request,
+        String code,
+        String message,
+        List<FieldErrorDto> fieldErrors
+) {
+
+    ErrorResponse body = ErrorResponse.builder()
+            .timestamp(Instant.now())
+            .status(status.value())
+            .error(status.getReasonPhrase())
+            .message(message)
+            .path(request.getRequestURI())
+            .code(code)
+            .errors(fieldErrors)
+            .build();
+
+    return new ResponseEntity<>(body, status);
+}
+
     // ---------- Helpers ----------
     private ResponseEntity<ErrorResponse> build(HttpStatus status, String msg, HttpServletRequest req,
                                                String code, List<FieldErrorDto> fieldErrors) {

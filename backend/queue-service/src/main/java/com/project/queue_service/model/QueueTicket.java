@@ -22,7 +22,6 @@ public class QueueTicket {
     private Long id;
     @Column(name = "order_id")
     private Long orderId; // used only for PRODUCTION queue
-    private Long orderItemId;
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private QueueType queueType;
@@ -33,7 +32,7 @@ public class QueueTicket {
     @Column(nullable = false)
     private Integer ticketNumber;
     private TicketStatus ticketStatus;
-    private Long tellerId;
+    private Long userId;
 
     private LocalDateTime createdAt;
 

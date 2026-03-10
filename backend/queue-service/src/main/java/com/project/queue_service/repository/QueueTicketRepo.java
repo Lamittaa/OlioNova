@@ -24,9 +24,10 @@ public interface QueueTicketRepo extends JpaRepository<QueueTicket, Long> {
     );
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    Optional<QueueTicket> findByTellerIdAndTicketStatus(
-            Long tellerId,
-            TicketStatus ticketStatus
+    Optional<QueueTicket> findByUserIdAndTicketStatusAndQueueDate(
+            Long userId,
+            TicketStatus ticketStatus,
+            LocalDate queueDate
     );
 
     List<QueueTicket> findAllByQueueTypeAndQueueDateAndTicketStatusIn(
@@ -43,10 +44,6 @@ public interface QueueTicketRepo extends JpaRepository<QueueTicket, Long> {
     }
 
 
-    boolean existsByOrderItemIdAndQueueType(
-            Long orderItemId,
-            QueueType queueType
-    );
     boolean existsByOrderIdAndQueueType(
         Long orderId,
         QueueType queueType

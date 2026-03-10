@@ -4,9 +4,7 @@ import com.project.order.client.CustomerClient;
 import com.project.order.dto.CreateOrderItemRequest;
 import com.project.order.dto.CreateOrderRequest;
 import com.project.order.dto.OrderResponse;
-import com.project.order.exception.InvalidOrderItemsException;
-import com.project.order.exception.InvalidOrderStatusTransitionException;
-import com.project.order.exception.ResourceNotFoundException;
+import com.project.order.exception.*;
 import com.project.order.mapper.OrderItemMapper;
 import com.project.order.mapper.OrderMapper;
 import com.project.order.model.Order;
@@ -16,8 +14,10 @@ import com.project.order.model.ProductLookup;
 import com.project.order.repository.OrderRepo;
 import com.project.order.repository.OrderStatusRepo;
 import com.project.order.repository.ProductLookupRepo;
+
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,6 +38,7 @@ public class OrderService {
     private final CustomerClient customerClient;
     private final OrderMapper orderMapper;
     private final OrderItemMapper orderItemMapper;
+
     // ================= CREATE =================
     public OrderResponse createOrder(CreateOrderRequest request) {
 
@@ -66,7 +67,10 @@ public class OrderService {
 
         Order order = orderRepo.findById(id)
                 .orElseThrow(() ->
-                        new ResourceNotFoundException("Order not found with id: " + id));
+                        new ResourceNotFoundException(
+                                "Order not found with id: " + id
+                        )
+                );
 
         return buildOrderResponse(order);
     }
@@ -81,75 +85,75 @@ public class OrderService {
     }
 
     // ================= CANCEL =================
-   public void cancelOrder(Long id) {
+    public void cancelOrder(Long id) {
 
-    Order order = orderRepo.findById(id)
-            .orElseThrow(() ->
-                    new ResourceNotFoundException("Order not found with id: " + id));
+        Order order = orderRepo.findById(id)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Order not found with id: " + id
+                        )
+                );
 
-    OrderStatus canceled = getStatus("CANCELED");
+        OrderStatus canceled = getStatus("CANCELED");
 
-    order.setStatus(canceled);
-    order.setUpdatedAt(LocalDateTime.now());
+        order.setStatus(canceled);
+        order.setUpdatedAt(LocalDateTime.now());
 
-    order.getItems().forEach(item -> {
-        item.setStatus(canceled);
-        item.setUpdatedAt(LocalDateTime.now());
-    });
-}
-
-    // ================= PAY (✅ FIXED HERE) =================
-public void payOrder(Long orderId) {
-
-    Order order = orderRepo.findById(orderId)
-            .orElseThrow(() ->
-                    new ResourceNotFoundException(
-                            "Order not found with id: " + orderId
-                    )
-            );
-
-    String status = order.getStatus().getStatusName();
-
-    // ❌ مسموح الدفع فقط من SUBMITTED
-    if (!"SUBMITTED".equalsIgnoreCase(status)) {
-        throw new InvalidOrderStatusTransitionException(
-                "Order cannot be paid in status: " + status
-        );
-    }
-
-    // 🔥 الجديد هنا — قبل الدفع
-    boolean hasRefundedItem = order.getItems().stream()
-            .anyMatch(i ->
-                    i.getStatus() != null &&
-                    i.getStatus().getStatusName()
-                            .equalsIgnoreCase("REFUNDED")
-            );
-
-    if (hasRefundedItem) {
-        throw new InvalidOrderStatusTransitionException(
-                "Cannot pay order with refunded items"
-        );
-    }
-
-    OrderStatus paidStatus = getStatus("PAID");
-
-    // 1️⃣ تحديث الطلب
-    order.setStatus(paidStatus);
-    order.setUpdatedAt(LocalDateTime.now());
-
-    // 2️⃣ تحديث كل العناصر
-    order.getItems().forEach(item -> {
-        if (item.getStatus().getStatusName()
-                .equalsIgnoreCase("SUBMITTED")) {
-
-            item.setStatus(paidStatus);
+        order.getItems().forEach(item -> {
+            item.setStatus(canceled);
             item.setUpdatedAt(LocalDateTime.now());
-        }
-    });
+        });
+    }
 
-    orderRepo.save(order);
-}
-    // ================= RESPONSE BUILDER =================
+    // ================= PAY =================
+    public void payOrder(Long orderId) {
+
+        Order order = orderRepo.findById(orderId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Order not found with id: " + orderId
+                        )
+                );
+
+        String status = order.getStatus().getStatusName();
+
+        if (!"SUBMITTED".equalsIgnoreCase(status)) {
+            throw new InvalidOrderStatusTransitionException(
+                    "Order cannot be paid in status: " + status
+            );
+        }
+
+        boolean hasRefundedItem = order.getItems().stream()
+                .anyMatch(i ->
+                        i.getStatus() != null &&
+                        i.getStatus().getStatusName()
+                                .equalsIgnoreCase("REFUNDED")
+                );
+
+        if (hasRefundedItem) {
+            throw new InvalidOrderStatusTransitionException(
+                    "Cannot pay order with refunded items"
+            );
+        }
+
+        OrderStatus paidStatus = getStatus("PAID");
+
+        order.setStatus(paidStatus);
+        order.setUpdatedAt(LocalDateTime.now());
+
+        order.getItems().forEach(item -> {
+            if (item.getStatus().getStatusName()
+                    .equalsIgnoreCase("SUBMITTED")) {
+
+                item.setStatus(paidStatus);
+                item.setUpdatedAt(LocalDateTime.now());
+            }
+        });
+
+        orderRepo.save(order);
+    }
+
+    // ================= RESPONSE =================
     private OrderResponse buildOrderResponse(Order order) {
 
         OrderResponse response = orderMapper.toOrderResponse(order);
@@ -157,7 +161,7 @@ public void payOrder(Long orderId) {
         response.setItems(
                 order.getItems()
                         .stream()
-                         .map(orderItemMapper::toResponse)
+                        .map(orderItemMapper::toResponse)
                         .toList()
         );
 
@@ -166,33 +170,55 @@ public void payOrder(Long orderId) {
 
     // ================= HELPERS =================
     private void recalcTotal(Order order) {
+
         order.setTotalPrice(
-                order.getItems().stream()
+                order.getItems()
+                        .stream()
                         .map(OrderItem::getTotalPrice)
                         .reduce(BigDecimal.ZERO, BigDecimal::add)
         );
     }
 
     private BigDecimal computePrice(ProductLookup product, boolean isMember) {
+
         if (!isMember || product.getMemberDiscount() == null) {
             return product.getPrice();
         }
+
         return product.getPrice()
                 .multiply(BigDecimal.ONE.subtract(product.getMemberDiscount()));
     }
 
     private OrderStatus getStatus(String status) {
+
         return statusRepo.findByStatusNameIgnoreCase(status)
                 .orElseThrow(() ->
-                        new ResourceNotFoundException("OrderStatus not found: " + status));
+                        new ResourceNotFoundException(
+                                "OrderStatus not found: " + status
+                        )
+                );
     }
 
+    // ================= CUSTOMER SERVICE CALL =================
     private boolean fetchMembership(Long customerId) {
+
         try {
-            return customerClient.getMembership(customerId).isMembership();
+
+            return customerClient
+                    .getMembership(customerId)
+                    .isMembership();
+
         } catch (FeignException.NotFound e) {
+
             throw new ResourceNotFoundException(
-                    "Customer not found with id: " + customerId);
+                    "Customer not found with id: " + customerId
+            );
+
+        } catch (FeignException e) {
+
+            throw new ServiceUnavailableException(
+                    "Customer service is currently unavailable"
+            );
         }
     }
 
@@ -200,7 +226,9 @@ public void payOrder(Long orderId) {
     private void validateOrderItems(List<CreateOrderItemRequest> items) {
 
         if (items == null || items.isEmpty()) {
-            throw new InvalidOrderItemsException("Order must contain at least one item");
+            throw new InvalidOrderItemsException(
+                    "Order must contain at least one item"
+            );
         }
 
         Set<Long> purchaseProducts = new HashSet<>();
@@ -210,23 +238,37 @@ public void payOrder(Long orderId) {
 
             ProductLookup product = productRepo.findById(item.getProductId())
                     .orElseThrow(() ->
-                            new InvalidOrderItemsException("Invalid productId"));
+                            new InvalidOrderItemsException(
+                                    "Invalid productId"
+                            )
+                    );
 
             if ("SERVICE".equals(product.getProductType())) {
 
-                if (item.getOliveType() == null || item.getBagsCount() == null) {
-                    throw new InvalidOrderItemsException("Service requires oliveType & bagsCount");
+                if (item.getOliveType() == null ||
+                        item.getBagsCount() == null) {
+
+                    throw new InvalidOrderItemsException(
+                            "Service requires oliveType & bagsCount"
+                    );
                 }
 
                 String key = product.getId() + "|" + item.getOliveType();
+
                 if (!oliveServices.add(key)) {
-                    throw new InvalidOrderItemsException("Duplicate service with same oliveType");
+
+                    throw new InvalidOrderItemsException(
+                            "Duplicate service with same oliveType"
+                    );
                 }
 
             } else {
 
                 if (!purchaseProducts.add(product.getId())) {
-                    throw new InvalidOrderItemsException("Duplicate purchase product");
+
+                    throw new InvalidOrderItemsException(
+                            "Duplicate purchase product"
+                    );
                 }
             }
         }
@@ -239,9 +281,13 @@ public void payOrder(Long orderId) {
 
         ProductLookup product = productRepo.findById(dto.getProductId())
                 .orElseThrow(() ->
-                        new ResourceNotFoundException("Product not found"));
+                        new ResourceNotFoundException(
+                                "Product not found"
+                        )
+                );
 
         OrderItem item = new OrderItem();
+
         item.setOrder(order);
         item.setProductId(product.getId());
         item.setProductName(product.getProductName());
@@ -252,6 +298,7 @@ public void payOrder(Long orderId) {
         item.setNote(dto.getNote());
 
         BigDecimal price = computePrice(product, isMember);
+
         item.setPrice(price);
         item.setTotalPrice(price.multiply(dto.getQuantity()));
         item.setStatus(getStatus("SUBMITTED"));
@@ -267,12 +314,21 @@ public void payOrder(Long orderId) {
         Long customerId;
 
         try {
+
             customerId = customerClient
                     .getByNationalId(nationalId)
                     .getId();
+
         } catch (FeignException.NotFound e) {
+
             throw new ResourceNotFoundException(
                     "Customer not found with nationalId: " + nationalId
+            );
+
+        } catch (FeignException e) {
+
+            throw new ServiceUnavailableException(
+                    "Customer service is currently unavailable"
             );
         }
 
@@ -281,8 +337,4 @@ public void payOrder(Long orderId) {
                 .map(this::buildOrderResponse)
                 .toList();
     }
-
-
-    
 }
-

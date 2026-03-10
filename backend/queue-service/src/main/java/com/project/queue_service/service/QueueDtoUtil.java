@@ -51,7 +51,7 @@ public class QueueDtoUtil {
 
         int activeCounters = (int) tickets.stream()
                 .filter(t -> t.getTicketStatus() == TicketStatus.SERVING)
-                .map(QueueTicket::getTellerId)
+                .map(QueueTicket::getUserId)
                 .distinct()
                 .count();
 

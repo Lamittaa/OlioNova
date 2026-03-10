@@ -3,13 +3,11 @@ package com.project.queue_service.exception;
 import com.project.queue_service.dto.ErrorResponse;
 import com.project.queue_service.dto.FieldErrorDto;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.support.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
-
 import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -167,6 +165,39 @@ public ResponseEntity<ErrorResponse> handleInvalidState(
             HttpStatus.BAD_REQUEST,
             request,
             ex.getErrorCode(),
+            ex.getMessage(),
+            null
+    );
+}
+
+// ============================================
+// 6️⃣ Duplicate Ticket
+// ============================================
+@ExceptionHandler(DuplicateTicketException.class)
+public ResponseEntity<ErrorResponse> handleDuplicateTicket(
+        DuplicateTicketException ex,
+        HttpServletRequest request
+) {
+
+    return buildError(
+            HttpStatus.CONFLICT,
+            request,
+            "DUPLICATE_TICKET",
+            ex.getMessage(),
+            null
+    );
+}
+
+@ExceptionHandler(ServiceUnavailableException.class)
+public ResponseEntity<ErrorResponse> handleServiceUnavailable(
+        ServiceUnavailableException ex,
+        HttpServletRequest request
+) {
+
+    return buildError(
+            HttpStatus.SERVICE_UNAVAILABLE,
+            request,
+            ex.getErrorCode().toString(),
             ex.getMessage(),
             null
     );

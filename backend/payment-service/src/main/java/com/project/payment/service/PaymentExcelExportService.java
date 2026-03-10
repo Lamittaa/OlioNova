@@ -102,7 +102,7 @@ public class PaymentExcelExportService {
                 row.createCell(2).setCellValue(p.getTotalPrice().doubleValue());
                 row.createCell(3).setCellValue(p.getPaymentType().name());
                 row.createCell(4).setCellValue(p.getPaymentDate().toString());
-                row.createCell(5).setCellValue(p.getEmployeeId());
+                row.createCell(5).setCellValue(p.getUserId());
             }
 
             // ===== Auto-size =====

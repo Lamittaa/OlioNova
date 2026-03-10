@@ -78,7 +78,7 @@ Employee employee = employeeRepo.findByUserUsername(user.getUsername())
     String accessToken = jwtService.generateAccessToken(
             user.getUsername(),
             authorities,
-            employee.getId()
+            user.getId()
     );
 
     String refreshToken = jwtService.generateRefreshToken(userDetails);

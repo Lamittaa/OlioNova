@@ -15,5 +15,5 @@ public class PaymentResponse {
     private BigDecimal totalPrice;
     private PaymentType paymentType;
     private LocalDateTime paymentDate;
-    private Long employeeId;
+    private Long userId;
 }

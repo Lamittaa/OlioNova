@@ -11,7 +11,7 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class EmployeePaymentSummary {
 
-    private Long employeeId;
+    private Long userId;
     private long count;
     private BigDecimal total;
 }

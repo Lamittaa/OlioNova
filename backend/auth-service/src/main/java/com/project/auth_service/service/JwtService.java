@@ -76,12 +76,12 @@ public class JwtService {
 public String generateAccessToken(
         String username,
         Collection<String> authorities,
-        Long employeeId
+        Long userId
 ) {
     Map<String, Object> claims = new HashMap<>();
 
     claims.put(AUTHORITIES_CLAIM, authorities);
-    claims.put("employeeId", employeeId);
+    claims.put("userId", userId);
     claims.put(JTI, UUID.randomUUID().toString());
 
     return createToken(claims, username, accessExpirationMs);

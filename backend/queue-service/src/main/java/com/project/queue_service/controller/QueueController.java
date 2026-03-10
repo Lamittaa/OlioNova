@@ -19,11 +19,12 @@ public class QueueController {
 
     // ================= ISSUE TICKET =================
     @PreAuthorize("hasAnyRole('RECEPTIONIST','ADMIN')")
-    @PostMapping("/{queueType}/tickets")
+    @PostMapping("/accounting/tickets")
     @ResponseStatus(HttpStatus.CREATED)
     public QueueTicket issueTicket(
-            @PathVariable QueueType queueType) {
-        return queueManager.issueTicket(queueType);
+            @RequestParam Long orderId) {
+        return queueManager.issueTicket(QueueType.ACCOUNTING,orderId);
+    
     }
 
     // ================= ADVANCE =================
@@ -44,23 +45,7 @@ public class QueueController {
         return queueManager.getQueueStatus(queueType);
     }
 
-    // ================= ADD TO PRODUCTION =================
-    @PreAuthorize("hasAnyRole('ACCOUNTANT','ADMIN')")
-  @PostMapping("/production")
-public QueueTicket addToProduction(
-        @RequestParam Long orderId,
-        @RequestParam Long orderItemId) {
 
-    return queueManager.addToProduction(orderId, orderItemId);
-}
 
-    // ================= COMPLETE =================
-    @PreAuthorize("hasAnyRole('TECHNICIAN','ADMIN')")
-    @PostMapping("/{queueType}/complete")
-    public QueueTicket completeTicket(
-            @PathVariable QueueType queueType,
-            @RequestParam Long ticketId) {
-        return queueManager.completeTicket(queueType, ticketId);
-    }
 
 }
