@@ -16,7 +16,7 @@ spring:
         - id: auth-api
           uri: lb://AUTH-SERVICE
           predicates:
-            - Path=/api/auth/**,/api/users/**,/api/roles/**
+            - Path=/api/auth/**,/api/users/**,/api/roles/**,/api/employees/**,/api/authorities/**,/api/set-password
 
         # CUSTOMER-SERVICE
         - id: customer-api
@@ -30,25 +30,29 @@ spring:
           predicates:
             - Path=/api/orders/**,/api/products/**,/api/order-statuses/**
 
-         # PAYMENT-SERVICE
+        # PAYMENT-SERVICE
         - id: payment-api
           uri: lb://PAYMENT-SERVICE
           predicates:
-          - Path=/api/payments/**,/api/payment-reports/**
-         
-          
+            - Path=/api/payments/**,/api/payment-reports/**
+
         # PRODUCTIONSTAGES-SERVICE
         - id: productionStages-api
           uri: lb://PRODUCTIONSTAGES-SERVICE
           predicates:
             - Path=/api/production-stages/**,/api/stage-types/**
-        
+
         # QUEUE-SERVICE
         - id: queue-api
           uri: lb://QUEUE-SERVICE
           predicates:
-            - Path=/api/queue/**
+            - Path=/api/queue/**,/api/queues/**
 
+        # QUEUE WEBSOCKET
+        - id: queue-websocket
+          uri: lb:ws://QUEUE-SERVICE
+          predicates:
+            - Path=/ws/**
 
 security:
   jwt:

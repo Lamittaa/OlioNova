@@ -245,7 +245,7 @@ public class CustomerController {
         @ApiResponse(responseCode = "409", description = "National ID already exists")
     })
     @PatchMapping("/{id}/national-id")
-    @PreAuthorize("hasRole('ADMIN') and hasAuthority('CUSTOMER_UPDATE_NATIONAL_ID')")
+    @PreAuthorize("hasRole('ADMIN', 'RECEPTIONIST') and hasAuthority('CUSTOMER_UPDATE_NATIONAL_ID')")
     public ResponseEntity<CustomerResponse> updateNationalId(
             @PathVariable Long id,
             @Valid @RequestBody UpdateCustomerNationalIdRequest request
