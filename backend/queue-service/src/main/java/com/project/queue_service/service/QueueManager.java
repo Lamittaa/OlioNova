@@ -138,53 +138,6 @@ private QueueTicket postServingTicket(
 
         status = TicketStatus.COMPLETED;
 
-        if (t.getQueueType() == QueueType.ACCOUNTING
-                && t.getOrderId() != null) {
-
-            try {
-
-                OrderResponse order =
-                        orderClient.getOrderById(t.getOrderId());
-
-                boolean hasServiceItem =
-                        order.getItems()
-                                .stream()
-                                .anyMatch(i ->
-                                        "SERVICE".equalsIgnoreCase(
-                                                i.getProductType()
-                                        )
-                                );
-
-                if (hasServiceItem) {
-
-                    boolean alreadyExists =
-                            queueTicketRepo.existsByOrderIdAndQueueType(
-                                    t.getOrderId(),
-                                    QueueType.PRODUCTION
-                            );
-
-                    if (!alreadyExists) {
-                        issueTicket(
-                                QueueType.PRODUCTION,
-                                t.getOrderId()
-                        );
-                    }
-                }
-
-            } catch (FeignException ex) {
-
-                log.error(
-                        "Order service unavailable for order {}",
-                        t.getOrderId(),
-                        ex
-                );
-
-                throw new ServiceUnavailableException(
-                        "Order service is currently unavailable"
-                );
-            }
-        }
-
     } else {
 
         status = TicketStatus.CANCELLED;
