@@ -9,8 +9,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 
@@ -22,75 +20,64 @@ public class EmployeeService {
     private final EmployeeRepository employeeRepo;
     private final UserRepository userRepo;
     private final RoleRepository roleRepo;
-    private final ActivationTokenRepository tokenRepo;
     private final EmailService emailService;
     private final PasswordEncoder encoder;
 
     // =========================================================
     // CREATE EMPLOYEE (ADMIN)
     // =========================================================
-    public Employee createEmployee(CreateEmployeeRequest req) {
+public Employee createEmployee(CreateEmployeeRequest req) {
 
-        if (employeeRepo.existsByNationalId(req.getNationalId())) {
-            throw new EntityAlreadyExistsException("National ID already exists");
-        }
-
-        if (employeeRepo.existsByEmail(req.getEmail())) {
-            throw new EntityAlreadyExistsException("Email already exists");
-        }
-
-        Role role = roleRepo.findByName(req.getRoleName())
-                .orElseThrow(() ->
-                        new RoleNotFoundException("Role not found: " + req.getRoleName())
-                );
-
-        String username = generateUniqueUsername();
-
-        // ---------- User ----------
-        User user = User.builder()
-                .username(username)
-                .password(encoder.encode(UUID.randomUUID().toString())) // temp password
-                .enabled(false) // ❌ inactive until email activation
-                .role(role)
-                .build();
-
-        userRepo.save(user);
-
-        // ---------- Employee ----------
-        Employee employee = Employee.builder()
-                .nationalId(req.getNationalId())
-                .firstName(req.getFirstName())
-                .lastName(req.getLastName())
-                .phoneNumber(req.getPhoneNumber())
-                .email(req.getEmail())
-                .gender(Gender.valueOf(req.getGender()))
-                .martialStatus(MaritalStatus.valueOf(req.getMaritalStatus()))
-                .user(user)
-                .build();
-
-        employeeRepo.save(employee);
-
-        // ---------- Activation Token ----------
-        String token = UUID.randomUUID().toString();
-
-        ActivationToken activationToken = ActivationToken.builder()
-                .token(token)
-                .user(user)
-                .expiresAt(Instant.now().plus(24, ChronoUnit.HOURS))
-                .build();
-
-        tokenRepo.save(activationToken);
-
-        // ---------- Send Email ----------
-        emailService.sendActivationEmail(
-                employee.getEmail(),
-                username,
-                token
-        );
-
-        return employee;
+    if (employeeRepo.existsByNationalId(req.getNationalId())) {
+        throw new EntityAlreadyExistsException("National ID already exists");
     }
 
+    if (employeeRepo.existsByEmail(req.getEmail())) {
+        throw new EntityAlreadyExistsException("Email already exists");
+    }
+
+    Role role = roleRepo.findByName(req.getRoleName())
+            .orElseThrow(() ->
+                    new RoleNotFoundException("Role not found: " + req.getRoleName())
+            );
+
+    String username = generateUniqueUsername();
+
+    String rawPassword = generateRandomPassword();
+
+    // ---------- User ----------
+    User user = User.builder()
+            .username(username)
+            .password(encoder.encode(rawPassword))
+            .enabled(true)
+            .role(role)
+            .build();
+
+    userRepo.save(user);
+
+    // ---------- Employee ----------
+    Employee employee = Employee.builder()
+            .nationalId(req.getNationalId())
+            .firstName(req.getFirstName())
+            .lastName(req.getLastName())
+            .phoneNumber(req.getPhoneNumber())
+            .email(req.getEmail())
+            .gender(Gender.valueOf(req.getGender()))
+            .martialStatus(MaritalStatus.valueOf(req.getMaritalStatus()))
+            .user(user)
+            .build();
+
+    employeeRepo.save(employee);
+
+    // ---------- Send Email ----------
+    emailService.sendAccountEmail(
+            employee.getEmail(),
+            username,
+            rawPassword
+    );
+
+    return employee;
+}
     // =========================================================
     // GET ALL (ADMIN)
     // =========================================================
@@ -208,5 +195,24 @@ public Employee getByNationalId(String nationalId) {
                             "Employee not found with nationalId=" + nationalId
                     )
             );
+}
+
+private String generateRandomPassword() {
+
+    String chars =
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZ" +
+            "abcdefghijklmnopqrstuvwxyz" +
+            "0123456789" +
+            "!@#$%&*";
+
+    StringBuilder password = new StringBuilder();
+
+    java.util.Random random = new java.util.Random();
+
+    for (int i = 0; i < 10; i++) {
+        password.append(chars.charAt(random.nextInt(chars.length())));
+    }
+
+    return password.toString();
 }
 }
