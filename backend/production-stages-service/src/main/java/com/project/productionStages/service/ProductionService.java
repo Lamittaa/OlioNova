@@ -1,7 +1,9 @@
 package com.project.productionStages.service;
 
+import com.project.productionStages.client.QueueClient;
 import com.project.productionStages.dto.ProductionStageResponse;
 import com.project.productionStages.dto.StartProductionRequest;
+import com.project.productionStages.exception.BusinessRuleException;
 import com.project.productionStages.model.*;
 import com.project.productionStages.repository.ProductionStageRepository;
 import lombok.RequiredArgsConstructor;
@@ -15,82 +17,95 @@ public class ProductionService {
 
     private final ProductionStageRepository stageRepository;
     private final LineSelectionService lineSelectionService;
+    private final QueueClient queueClient;
 
     // =========================================================
-    // 1️⃣ START PRODUCTION
+    // 1 START PRODUCTION
+    // يُنشئ Order Stages من الـ Templates الموجودة في الخط
     // =========================================================
-    public void startProduction(StartProductionRequest request){
+    public void startProduction(StartProductionRequest request) {
 
         String line = lineSelectionService.chooseBestLine();
 
-        List<StageType> pipeline = List.of(
-                StageType.WASHING,
-                StageType.CRUSHING,
-                StageType.MALAXATION,
-                StageType.PRESSING,
-                StageType.STORAGE
-        );
+        // ✅ جيب الـ Templates الخاصة بالخط بدل hard-coded pipeline
+        List<ProductionStage> templates =
+                stageRepository.findByLineAndIsTemplateOrderByStageOrderAsc(
+                        line,
+                        true
+                );
 
-        int order = 1;
+        if (templates.isEmpty()) {
+            throw new BusinessRuleException(
+                    "No pipeline templates found for line: " + line
+            );
+        }
 
-        for(StageType stageType : pipeline){
+        // ✅ أنشئ Order Stage من كل Template — isTemplate = false
+        for (ProductionStage template : templates) {
 
-            ProductionStage stage = ProductionStage.builder()
-                    .name(stageType.name())
-                    .stageType(stageType)
+            ProductionStage orderStage = ProductionStage.builder()
+                    .name(template.getName())
+                    .stageType(template.getStageType())
                     .orderId(request.getOrderId())
                     .orderItemId(request.getOrderItemId())
                     .line(line)
-                    .stageOrder(order++)
+                    .stageOrder(template.getStageOrder())
                     .currentStatus(StageStatus.NOT_YET)
+                    .isTemplate(false) // ✅ order stage مش template
                     .build();
 
-            stageRepository.save(stage);
+            stageRepository.save(orderStage);
         }
+
+        // إصدار تذكرة Queue
+        queueClient.issueProductionTicket(request.getOrderId());
     }
 
     // =========================================================
-    // 2️⃣ GET STAGES OF ORDER
+    // 2 GET STAGES OF ORDER
     // =========================================================
-    public List<ProductionStageResponse> getStagesByOrder(Long orderItemId){
+    public List<ProductionStageResponse> getStagesByOrder(Long orderItemId) {
 
-        List<ProductionStage> stages =
-                stageRepository.findByOrderItemId(orderItemId);
-
-        return stages.stream()
+        return stageRepository.findByOrderItemId(orderItemId)
+                .stream()
                 .map(this::mapToResponse)
                 .toList();
     }
 
     // =========================================================
-    // 3️⃣ GET PIPELINE STATUS
+    // 3 GET PIPELINE STATUS — order stages فقط
     // =========================================================
-    public List<ProductionStageResponse> getPipelineStatus(){
+    public List<ProductionStageResponse> getPipelineStatus() {
 
-        List<ProductionStage> stages = stageRepository.findAll();
-
-        return stages.stream()
-                .filter(s -> s.getCurrentStatus() == StageStatus.IN_PROGRESS)
+        // ✅ بدل findAll().stream().filter(IN_PROGRESS)
+        return stageRepository.findByCurrentStatusAndIsTemplate(
+                        StageStatus.IN_PROGRESS,
+                        false
+                )
+                .stream()
                 .map(this::mapToResponse)
                 .toList();
     }
 
     // =========================================================
-    // 4️⃣ GET STAGE BY ID
+    // 4 GET STAGE BY ID
     // =========================================================
-    public ProductionStageResponse getStageById(Long id){
+    public ProductionStageResponse getStageById(Long id) {
 
-        ProductionStage stage =
-                stageRepository.findById(id)
-                        .orElseThrow();
+        ProductionStage stage = stageRepository.findById(id)
+                .orElseThrow(() ->
+                        new com.project.productionStages.exception.ResourceNotFoundException(
+                                "Stage not found with id: " + id
+                        )
+                );
 
         return mapToResponse(stage);
     }
 
     // =========================================================
-    // 5️⃣ MAPPER (ENTITY → DTO)
+    // MAPPER
     // =========================================================
-    private ProductionStageResponse mapToResponse(ProductionStage stage){
+    private ProductionStageResponse mapToResponse(ProductionStage stage) {
 
         return ProductionStageResponse.builder()
                 .id(stage.getId())

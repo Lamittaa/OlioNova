@@ -3,7 +3,7 @@ server:
 
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/productionStagesdb
+    url: jdbc:postgresql://localhost:5432/productionStagesdb   
     username: postgres
     password: postgres
     driver-class-name: org.postgresql.Driver

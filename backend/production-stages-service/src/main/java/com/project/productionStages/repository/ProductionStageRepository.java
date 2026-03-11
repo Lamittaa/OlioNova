@@ -10,16 +10,76 @@ import java.util.Optional;
 @Repository
 public interface ProductionStageRepository extends JpaRepository<ProductionStage, Long> {
 
-    // جميع مراحل طلب معين
+    // =========================================================
+    // ORDER STAGES — isTemplate = false
+    // =========================================================
+
     List<ProductionStage> findByOrderItemId(Long orderItemId);
 
-    // جميع مراحل خط معين
-    List<ProductionStage> findByLine(String line);
+    Optional<ProductionStage> findByOrderItemIdAndStageOrder(
+            Long orderItemId,
+            Integer stageOrder
+    );
 
-    // المرحلة الجارية في خط معين
-    Optional<ProductionStage> findByLineAndCurrentStatus(String line, StageStatus status);
+    Optional<ProductionStage> findByOrderItemIdAndStageType(
+            Long orderItemId,
+            StageType stageType
+    );
 
-    // مرحلة معينة لطلب
-    Optional<ProductionStage> findByOrderItemIdAndStageType(Long orderItemId, StageType stageType);
+    // =========================================================
+    // LINE QUERIES — مع isTemplate لتجنب الخلط
+    // =========================================================
 
+    // order stages فقط في خط معين
+    List<ProductionStage> findByLineAndIsTemplate(
+            String line,
+            boolean isTemplate
+    );
+
+    // المرحلة الجارية في خط (order stages فقط)
+    Optional<ProductionStage> findByLineAndCurrentStatusAndIsTemplate(
+            String line,
+            StageStatus status,
+            boolean isTemplate
+    );
+
+    // WASHING NOT_YET في خط (للـ ETA)
+    List<ProductionStage> findByLineAndStageTypeAndCurrentStatusAndIsTemplate(
+            String line,
+            StageType stageType,
+            StageStatus status,
+            boolean isTemplate
+    );
+
+    // عدد المراحل بحالة معينة في خط (order stages فقط)
+    long countByLineAndCurrentStatusAndIsTemplate(
+            String line,
+            StageStatus status,
+            boolean isTemplate
+    );
+
+    // عدد المراحل بحالة + stageOrder في خط
+    long countByLineAndStageOrderAndCurrentStatusAndIsTemplate(
+            String line,
+            Integer stageOrder,
+            StageStatus status,
+            boolean isTemplate
+    );
+
+    // =========================================================
+    // TEMPLATE STAGES — isTemplate = true
+    // مرتبة بـ stageOrder لإنشاء Order Stages بالترتيب الصح
+    // =========================================================
+    List<ProductionStage> findByLineAndIsTemplateOrderByStageOrderAsc(
+            String line,
+            boolean isTemplate
+    );
+
+    // =========================================================
+    // PIPELINE — كل المراحل الجارية (order stages فقط)
+    // =========================================================
+    List<ProductionStage> findByCurrentStatusAndIsTemplate(
+            StageStatus status,
+            boolean isTemplate
+    );
 }
