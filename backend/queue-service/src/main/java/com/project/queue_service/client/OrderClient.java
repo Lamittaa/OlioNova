@@ -6,6 +6,7 @@ import com.project.queue_service.dto.OrderResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 
 @FeignClient(
         name = "order-service",
@@ -20,5 +21,8 @@ public interface OrderClient {
     OrderResponse getOrderById(
             @PathVariable Long orderId
     );
+
+   
+
 
 }

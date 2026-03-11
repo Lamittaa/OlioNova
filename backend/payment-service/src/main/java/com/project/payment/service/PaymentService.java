@@ -126,18 +126,19 @@ public class PaymentService {
         }
 
         // ---------- ADD TO ACCOUNTING QUEUE ----------
-        try {
+// ---------- ADD TO PRODUCTION QUEUE ----------
+try {
 
-            queueClient.issueAccountingTicket(orderId);
+    queueClient.issueProductionTicket(orderId);
 
-        } catch (FeignException e) {
+} catch (FeignException e) {
 
-            log.error("Queue service unavailable", e);
+    log.error("Queue service unavailable", e);
 
-            throw new ServiceUnavailableException(
-                    "Queue service is currently unavailable"
-            );
-        }
+    throw new ServiceUnavailableException(
+            "Queue service is currently unavailable"
+    );
+}
 
         return map(saved);
     }

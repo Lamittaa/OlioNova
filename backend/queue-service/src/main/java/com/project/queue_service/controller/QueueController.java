@@ -45,7 +45,17 @@ public class QueueController {
         return queueManager.getQueueStatus(queueType);
     }
 
+@PreAuthorize("hasAnyRole('ACCOUNTANT','ADMIN')")
+@PostMapping("/production/{orderId}")
+@ResponseStatus(HttpStatus.CREATED)
+public QueueTicket issueProductionTicket(
+        @PathVariable Long orderId) {
 
+    return queueManager.issueTicket(
+            QueueType.PRODUCTION,
+            orderId
+    );
+}
 
 
 }
