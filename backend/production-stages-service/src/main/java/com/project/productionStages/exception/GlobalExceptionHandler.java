@@ -1,55 +1,204 @@
 package com.project.productionStages.exception;
 
+import com.project.productionStages.dto.ErrorResponse;
+import com.project.productionStages.dto.FieldErrorDto;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.ConstraintViolationException;
+
+import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
-import java.util.Map;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import org.springframework.validation.FieldError;
+
+import java.time.Instant;
+import java.util.List;
+import java.util.UUID;
+
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    // ================================
-    // Resource Not Found
-    // ================================
+    // =========================
+    // 404
+    // =========================
     @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<?> handleNotFound(ResourceNotFoundException ex){
+    public ResponseEntity<ErrorResponse> handleNotFound(
+            ResourceNotFoundException ex,
+            HttpServletRequest request
+    ) {
 
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(Map.of(
-                        "timestamp", LocalDateTime.now(),
-                        "error", "NOT_FOUND",
-                        "message", ex.getMessage()
-                ));
+        return build(
+                HttpStatus.NOT_FOUND,
+                ex.getMessage(),
+                request,
+                "RESOURCE_NOT_FOUND",
+                null
+        );
     }
 
-    // ================================
-    // Business Rule Error
-    // ================================
+    // =========================
+    // Business Rule
+    // =========================
     @ExceptionHandler(BusinessRuleException.class)
-    public ResponseEntity<?> handleBusinessRule(BusinessRuleException ex){
+    public ResponseEntity<ErrorResponse> handleBusiness(
+            BusinessRuleException ex,
+            HttpServletRequest request
+    ) {
 
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(Map.of(
-                        "timestamp", LocalDateTime.now(),
-                        "error", "BUSINESS_RULE_ERROR",
-                        "message", ex.getMessage()
-                ));
+        return build(
+                HttpStatus.BAD_REQUEST,
+                ex.getMessage(),
+                request,
+                "BUSINESS_RULE_ERROR",
+                null
+        );
     }
 
-    // ================================
-    // General Error
-    // ================================
+    // =========================
+    // Validation
+    // =========================
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ErrorResponse> handleValidation(
+            MethodArgumentNotValidException ex,
+            HttpServletRequest request
+    ) {
+
+        List<FieldErrorDto> fieldErrors = ex.getBindingResult()
+                .getFieldErrors()
+                .stream()
+                .map(this::toFieldErrorDto)
+                .toList();
+
+        return build(
+                HttpStatus.BAD_REQUEST,
+                "Validation failed",
+                request,
+                "VALIDATION_ERROR",
+                fieldErrors
+        );
+    }
+
+    // =========================
+    // Constraint
+    // =========================
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ErrorResponse> handleConstraint(
+            ConstraintViolationException ex,
+            HttpServletRequest request
+    ) {
+
+        List<FieldErrorDto> fieldErrors = ex.getConstraintViolations()
+                .stream()
+                .map(v -> new FieldErrorDto(
+                        v.getPropertyPath().toString(),
+                        v.getMessage(),
+                        v.getInvalidValue()
+                ))
+                .toList();
+
+        return build(
+                HttpStatus.BAD_REQUEST,
+                "Validation failed",
+                request,
+                "VALIDATION_ERROR",
+                fieldErrors
+        );
+    }
+
+    // =========================
+    // Method Not Allowed
+    // =========================
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleMethod(
+            HttpRequestMethodNotSupportedException ex,
+            HttpServletRequest request
+    ) {
+
+        return build(
+                HttpStatus.METHOD_NOT_ALLOWED,
+                ex.getMessage(),
+                request,
+                "METHOD_NOT_ALLOWED",
+                null
+        );
+    }
+
+    // =========================
+    // Unknown Error
+    // =========================
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<?> handleGeneral(Exception ex){
+    public ResponseEntity<ErrorResponse> handleUnknown(
+            Exception ex,
+            HttpServletRequest request
+    ) {
 
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of(
-                        "timestamp", LocalDateTime.now(),
-                        "error", "SERVER_ERROR",
-                        "message", ex.getMessage()
-                ));
+        String traceId = UUID.randomUUID().toString();
+
+        log.error("Unhandled exception [traceId={}]", traceId, ex);
+
+        return build(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "Internal server error. traceId=" + traceId,
+                request,
+                "INTERNAL_ERROR",
+                null
+        );
     }
 
+    // =========================
+    // Helper Builder
+    // =========================
+    private ResponseEntity<ErrorResponse> build(
+            HttpStatus status,
+            String message,
+            HttpServletRequest request,
+            String code,
+            List<FieldErrorDto> fieldErrors
+    ) {
+
+        ErrorResponse body = ErrorResponse.builder()
+                .timestamp(Instant.now())
+                .status(status.value())
+                .error(status.getReasonPhrase())
+                .message(message)
+                .path(request.getRequestURI())
+                .code(code)
+                .errors(fieldErrors)
+                .build();
+
+        return ResponseEntity.status(status).body(body);
+    }
+
+    private FieldErrorDto toFieldErrorDto(FieldError fe) {
+
+        return new FieldErrorDto(
+                fe.getField(),
+                fe.getDefaultMessage(),
+                fe.getRejectedValue()
+        );
+    }
+
+    @ExceptionHandler(ServiceUnavailableException.class)
+public ResponseEntity<ErrorResponse> handleServiceUnavailable(
+        ServiceUnavailableException ex,
+        HttpServletRequest request
+) {
+
+    return build(
+            HttpStatus.SERVICE_UNAVAILABLE,
+            ex.getMessage(),
+            request,
+            ex.getErrorCode(),
+            null
+    );
+}
 }

@@ -36,5 +36,5 @@ public class ProductionStageLogging {
 
     private LocalDateTime endTime;
 
-    private Long employeeId;
+    private Long userId;
 }

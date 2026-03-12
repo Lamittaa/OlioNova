@@ -4,6 +4,10 @@ import com.project.productionStages.client.QueueClient;
 import com.project.productionStages.dto.ProductionEtaResponse;
 import com.project.productionStages.model.*;
 import com.project.productionStages.repository.*;
+import com.project.productionStages.exception.ServiceUnavailableException;
+
+import feign.FeignException;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -23,7 +27,7 @@ public class ProductionEtaService {
 
     public ProductionEtaResponse getEta(Long orderItemId) {
 
-        // 1 جيب المرحلة الجارية للطلب
+        // 1 جيب المرحلة الجارية
         List<ProductionStage> stages =
                 stageRepository.findByOrderItemId(orderItemId);
 
@@ -45,12 +49,32 @@ public class ProductionEtaService {
 
         ProductionStageLogging log = logOpt.get();
 
-        // 3 جيب queue number للطلب
-        Integer myQueueNumber = queueClient.getQueueNumber(current.getOrderId());
+        // =========================================================
+        // GET QUEUE NUMBER FROM QUEUE SERVICE
+        // =========================================================
+        Integer myQueueNumber;
+
+        try {
+
+            myQueueNumber =
+                    queueClient.getQueueNumber(current.getOrderId());
+
+        } catch (FeignException ex) {
+
+            throw new ServiceUnavailableException(
+                    "Queue service is currently unavailable",
+                    "QUEUE_SERVICE_DOWN"
+            );
+        }
+
         if (myQueueNumber == null) return null;
 
-        // 4 جيب أول queue number ينتظر في الخط
-        Integer firstWaitingQueueNumber = getFirstWaitingQueueNumber(current.getLine());
+        // =========================================================
+        // FIRST WAITING QUEUE
+        // =========================================================
+        Integer firstWaitingQueueNumber =
+                getFirstWaitingQueueNumber(current.getLine());
+
         if (firstWaitingQueueNumber == null) {
             firstWaitingQueueNumber = myQueueNumber;
         }
@@ -87,8 +111,7 @@ public class ProductionEtaService {
     }
 
     // =========================================================
-    // HELPER — أول queue ينتظر في الخط
-    // ✅ isTemplate=false — order stages فقط
+    // HELPER — أول queue ينتظر
     // =========================================================
     private Integer getFirstWaitingQueueNumber(String line) {
 
@@ -97,11 +120,25 @@ public class ProductionEtaService {
                         line,
                         StageType.WASHING,
                         StageStatus.NOT_YET,
-                        false // order stages فقط
+                        false
                 );
 
         return waitingWashings.stream()
-                .map(s -> queueClient.getQueueNumber(s.getOrderId()))
+                .map(stage -> {
+
+                    try {
+
+                        return queueClient.getQueueNumber(stage.getOrderId());
+
+                    } catch (FeignException ex) {
+
+                        throw new ServiceUnavailableException(
+                                "Queue service is currently unavailable",
+                                "QUEUE_SERVICE_DOWN"
+                        );
+                    }
+
+                })
                 .filter(q -> q != null)
                 .min(Integer::compareTo)
                 .orElse(null);

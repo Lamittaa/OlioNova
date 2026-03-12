@@ -6,8 +6,12 @@ import com.project.productionStages.dto.StartStageRequest;
 import com.project.productionStages.model.*;
 import com.project.productionStages.exception.BusinessRuleException;
 import com.project.productionStages.exception.ResourceNotFoundException;
+import com.project.productionStages.exception.ServiceUnavailableException;
 import com.project.productionStages.repository.ProductionStageLoggingRepository;
 import com.project.productionStages.repository.ProductionStageRepository;
+
+import feign.FeignException;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -42,7 +46,6 @@ public class StageService {
             throw new BusinessRuleException("Stage already started");
         }
 
-        // ✅ بدل findByOrderItemId().stream().filter(stageOrder == X)
         if (stage.getStageOrder() > 1) {
 
             ProductionStage prev =
@@ -71,7 +74,7 @@ public class StageService {
                         .line(stage.getLine())
                         .stageOrder(stage.getStageOrder())
                         .startTime(LocalDateTime.now())
-                        .employeeId(request.getEmployeeId())
+                        .userId(request.getUserId())
                         .build();
 
         loggingRepository.save(log);
@@ -101,7 +104,6 @@ public class StageService {
         stage.setCurrentStatus(StageStatus.DONE);
         stageRepository.save(stage);
 
-        // ✅ بدل findByOrderItemId().stream().filter(stageOrder)
         ProductionStageLogging log =
                 loggingRepository.findByOrderItemIdAndStageOrder(
                                 stage.getOrderItemId(),
@@ -114,13 +116,32 @@ public class StageService {
         log.setEndTime(LocalDateTime.now());
         loggingRepository.save(log);
 
-        // ✅ آخر مرحلة → أخبر Order Service
+        // =========================================================
+        // LAST STAGE → CALL ORDER SERVICE
+        // =========================================================
         if (stage.getStageType() == StageType.STORAGE) {
-            orderClient.updateOrderStatus(stage.getOrderId(), "COMPLETED");
+
+            try {
+
+                orderClient.updateOrderStatus(
+                        stage.getOrderId(),
+                        "COMPLETED"
+                );
+
+            } catch (FeignException ex) {
+
+                throw new ServiceUnavailableException(
+                        "Order service is currently unavailable",
+                        "ORDER_SERVICE_DOWN"
+                );
+            }
+
             return;
         }
 
-        // ✅ بدل findByOrderItemId().stream().filter(stageOrder+1)
+        // =========================================================
+        // MOVE TO NEXT STAGE
+        // =========================================================
         stageRepository.findByOrderItemIdAndStageOrder(
                         stage.getOrderItemId(),
                         stage.getStageOrder() + 1

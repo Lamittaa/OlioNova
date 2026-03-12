@@ -8,8 +8,7 @@ public interface OrderClient {
 
     @PutMapping("/api/orders/{orderId}/status")
     void updateOrderStatus(
-            @PathVariable Long orderId,
-            @RequestParam String status
+            @PathVariable("orderId") Long orderId,
+            @RequestParam("status") String status
     );
-
 }

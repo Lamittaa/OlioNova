@@ -9,6 +9,6 @@ public class StartStageRequest {
     @NotNull(message = "stageId is required")
     private Long stageId;
 
-    @NotNull(message = "employeeId is required")
-    private Long employeeId;
+    @NotNull(message = "userId is required")
+    private Long userId;
 }

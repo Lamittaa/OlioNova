@@ -14,12 +14,7 @@ public class ProductionEtaEngine {
     private final QueueAlgorithmService queueAlgo;
 
     // =========================================================
-    // حساب ETA لطلب ينتظر (NOT_YET) في الـ Queue
-    //
-    // الفورمولا من الصور:
-    // Estimated time = inProgress_finish_time + avg * previousGroupCount
-    //
-    // previousGroupCount = int((actualQueue - firstWaitingQueue) / lineCount)
+    // ETA لطلب ينتظر في الـ Queue
     // =========================================================
     public long calculateEta(
             StageType stageType,
@@ -28,29 +23,21 @@ public class ProductionEtaEngine {
             int firstWaitingQueue,
             int lineCount
     ) {
-        // وقت انتهاء المرحلة الحالية
-        long inProgressFinishTime =
+
+        long remainingTime =
                 timeService.getRemainingMinutes(stageType, stageStartTime);
 
-        // متوسط وقت المرحلة
-        long avg = timeService.getAverageStageMinutes(stageType);
+        long averageStageTime =
+                timeService.getAverageStageMinutes(stageType);
 
-        // عدد المجموعات السابقة
-        int previousGroups = queueAlgo.getPreviousGroups(
-                queueNumber,
-                firstWaitingQueue,
-                lineCount
-        );
+        int previousGroups =
+                queueAlgo.getPreviousGroups(queueNumber, firstWaitingQueue, lineCount);
 
-        // ETA = remaining + avg * previousGroups
-        return inProgressFinishTime + (avg * previousGroups);
+        return remainingTime + (averageStageTime * previousGroups);
     }
 
     // =========================================================
-    // حساب وقت انتهاء Queue (للطلب الذي يريد أن يدخل)
-    //
-    // الفورمولا:
-    // finish time = inProgress_finish_time + avg * (previousGroupCount + 1)
+    // حساب وقت انتهاء الطلب في الـ Queue
     // =========================================================
     public long calculateFinishTime(
             StageType stageType,
@@ -59,18 +46,16 @@ public class ProductionEtaEngine {
             int firstWaitingQueue,
             int lineCount
     ) {
-        long inProgressFinishTime =
+
+        long remainingTime =
                 timeService.getRemainingMinutes(stageType, stageStartTime);
 
-        long avg = timeService.getAverageStageMinutes(stageType);
+        long averageStageTime =
+                timeService.getAverageStageMinutes(stageType);
 
-        int previousGroups = queueAlgo.getPreviousGroups(
-                queueNumber,
-                firstWaitingQueue,
-                lineCount
-        );
+        int previousGroups =
+                queueAlgo.getPreviousGroups(queueNumber, firstWaitingQueue, lineCount);
 
-        // finish time = remaining + avg * (previousGroups + 1)
-        return inProgressFinishTime + (avg * (previousGroups + 1));
+        return remainingTime + (averageStageTime * (previousGroups + 1));
     }
 }
