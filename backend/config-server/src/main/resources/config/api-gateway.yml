@@ -54,6 +54,13 @@ spring:
           predicates:
             - Path=/ws/**
 
+        # TRACKING-SERVICE
+        - id: tracking-api
+          uri: lb://TRACKING-SERVICE
+          predicates:
+            - Path=/api/tracking/**,/api/tracking-reports/**
+        
+
 security:
   jwt:
     secret: MySuperSecretKeyForJwt1234567890MyExtra
