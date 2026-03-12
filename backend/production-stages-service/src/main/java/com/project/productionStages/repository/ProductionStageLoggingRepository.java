@@ -16,13 +16,13 @@ public interface ProductionStageLoggingRepository
     // ❌ كان غلط — EXTRACT(EPOCH) هو PostgreSQL SQL مش JPQL
     // ✅ استخدم nativeQuery = true لأن TIMESTAMPDIFF مش standard JPQL
     // =========================================================
-    @Query(value = """
-        SELECT AVG(TIMESTAMPDIFF(MINUTE, l.start_time, l.end_time))
-        FROM production_stage_logging l
-        WHERE l.stage_type = :stageType
-        AND l.end_time IS NOT NULL
-    """, nativeQuery = true)
-    Double getAverageStageMinutes(@Param("stageType") String stageType);
+@Query(value = """
+SELECT AVG(EXTRACT(EPOCH FROM (l.end_time - l.start_time)) / 60.0)
+FROM production_stage_logging l
+WHERE l.stage_type = :stageType
+AND l.end_time IS NOT NULL
+""", nativeQuery = true)
+Double getAverageStageMinutes(@Param("stageType") String stageType);
 
     // =========================================================
     // جيب كل logs لـ orderItem معين

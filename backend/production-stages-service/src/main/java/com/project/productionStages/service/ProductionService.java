@@ -1,11 +1,12 @@
 package com.project.productionStages.service;
 
-import com.project.productionStages.client.QueueClient;
 import com.project.productionStages.dto.ProductionStageResponse;
 import com.project.productionStages.dto.StartProductionRequest;
 import com.project.productionStages.exception.BusinessRuleException;
+import com.project.productionStages.exception.ResourceNotFoundException;
 import com.project.productionStages.model.*;
 import com.project.productionStages.repository.ProductionStageRepository;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -17,17 +18,22 @@ public class ProductionService {
 
     private final ProductionStageRepository stageRepository;
     private final LineSelectionService lineSelectionService;
-    private final QueueClient queueClient;
 
     // =========================================================
     // 1 START PRODUCTION
-    // يُنشئ Order Stages من الـ Templates الموجودة في الخط
     // =========================================================
     public void startProduction(StartProductionRequest request) {
 
+        // check if production already started
+        if (!stageRepository.findByOrderItemId(request.getOrderItemId()).isEmpty()) {
+            throw new BusinessRuleException(
+                    "Production already started for order item: "
+                            + request.getOrderItemId()
+            );
+        }
+
         String line = lineSelectionService.chooseBestLine();
 
-        // ✅ جيب الـ Templates الخاصة بالخط بدل hard-coded pipeline
         List<ProductionStage> templates =
                 stageRepository.findByLineAndIsTemplateOrderByStageOrderAsc(
                         line,
@@ -40,7 +46,6 @@ public class ProductionService {
             );
         }
 
-        // ✅ أنشئ Order Stage من كل Template — isTemplate = false
         for (ProductionStage template : templates) {
 
             ProductionStage orderStage = ProductionStage.builder()
@@ -51,14 +56,11 @@ public class ProductionService {
                     .line(line)
                     .stageOrder(template.getStageOrder())
                     .currentStatus(StageStatus.NOT_YET)
-                    .isTemplate(false) // ✅ order stage مش template
+                    .isTemplate(false)
                     .build();
 
             stageRepository.save(orderStage);
         }
-
-        // إصدار تذكرة Queue
-        queueClient.issueProductionTicket(request.getOrderId());
     }
 
     // =========================================================
@@ -73,11 +75,10 @@ public class ProductionService {
     }
 
     // =========================================================
-    // 3 GET PIPELINE STATUS — order stages فقط
+    // 3 GET PIPELINE STATUS
     // =========================================================
     public List<ProductionStageResponse> getPipelineStatus() {
 
-        // ✅ بدل findAll().stream().filter(IN_PROGRESS)
         return stageRepository.findByCurrentStatusAndIsTemplate(
                         StageStatus.IN_PROGRESS,
                         false
@@ -94,7 +95,7 @@ public class ProductionService {
 
         ProductionStage stage = stageRepository.findById(id)
                 .orElseThrow(() ->
-                        new com.project.productionStages.exception.ResourceNotFoundException(
+                        new ResourceNotFoundException(
                                 "Stage not found with id: " + id
                         )
                 );
