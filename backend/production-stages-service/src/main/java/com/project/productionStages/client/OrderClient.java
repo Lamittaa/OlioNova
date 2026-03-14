@@ -10,5 +10,5 @@ public interface OrderClient {
     void updateOrderStatus(
             @PathVariable("orderId") Long orderId,
             @RequestParam("status") String status
-    );
+    ); 
 }

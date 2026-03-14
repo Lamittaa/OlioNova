@@ -30,7 +30,6 @@ public class OrderStatusController {
 
         private final OrderStatusService orderStatusService;
 
-        // ================= GET BY ID =================
         @GetMapping("/{id}")
         @PreAuthorize("hasAnyRole('ADMIN','RECEPTIONIST','ACCOUNTANT','TECHNICIAN') and hasAuthority('ORDER_STATUS_READ')")
         @Operation(summary = "Get order status by ID", description = "Returns a single order status by its ID.")
@@ -50,7 +49,6 @@ public class OrderStatusController {
                 return ResponseEntity.ok(orderStatusService.getStatusById(id));
         }
 
-        // ================= GET ALL (id + name) =================
         @GetMapping
         @PreAuthorize("hasAnyRole('ADMIN','RECEPTIONIST','ACCOUNTANT','TECHNICIAN') and hasAuthority('ORDER_STATUS_READ')")
         @Operation(summary = "Get all order statuses", description = "Returns all order statuses (id + name).")
@@ -68,8 +66,7 @@ public class OrderStatusController {
                 return ResponseEntity.ok(orderStatusService.getAllStatuses());
         }
 
-        // ================= GET VALUES ONLY =================
-        // ✅ Frontend dropdown helper
+      
         @GetMapping("/values")
         @PreAuthorize("hasAnyRole('ADMIN','RECEPTIONIST','ACCOUNTANT','TECHNICIAN') and hasAuthority('ORDER_STATUS_READ')")
         @Operation(summary = "Get order status values", description = "Returns status names only (for dropdowns).")

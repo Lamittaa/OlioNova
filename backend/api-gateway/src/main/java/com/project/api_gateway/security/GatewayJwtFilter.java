@@ -1,3 +1,4 @@
+
 package com.project.api_gateway.security;
 
 import io.jsonwebtoken.Claims;
@@ -32,7 +33,6 @@ public class GatewayJwtFilter implements GlobalFilter, Ordered {
 
         String path = exchange.getRequest().getURI().getPath();
 
-        // ✅ Public endpoints
         if (path.startsWith("/api/auth")
                 || path.startsWith("/actuator/health")
                 || path.startsWith("/v3/api-docs")
@@ -41,7 +41,6 @@ public class GatewayJwtFilter implements GlobalFilter, Ordered {
             return chain.filter(exchange);
         }
 
-        // ✅ CORS preflight
         if ("OPTIONS".equalsIgnoreCase(exchange.getRequest().getMethod().name())) {
             return chain.filter(exchange);
         }
@@ -67,7 +66,6 @@ public class GatewayJwtFilter implements GlobalFilter, Ordered {
 
             String username = claims.getSubject();
 
-            // ✅ الحل: ننسخ الهيدرز ونضيف عليهم بدون ما نعدل ReadOnlyHttpHeaders
             ServerHttpRequest originalRequest = exchange.getRequest();
 
             HttpHeaders newHeaders = new HttpHeaders();

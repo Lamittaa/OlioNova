@@ -8,11 +8,9 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class LineSelectionService {
 
-    private final LineChooser lineChooser; // ← استخدم الـ Smart LineChooser
+    private final LineChooser lineChooser; 
 
-    // =========================================================
-    // اختيار أفضل خط إنتاج بناءً على ETA
-    // =========================================================
+   
     public String chooseBestLine() {
         return lineChooser.chooseBestLine();
     }

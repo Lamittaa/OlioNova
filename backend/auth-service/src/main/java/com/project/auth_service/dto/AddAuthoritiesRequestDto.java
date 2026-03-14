@@ -14,10 +14,5 @@ import java.util.List;
 public class AddAuthoritiesRequestDto {
     @NotEmpty(message = "Authorities list cannot be empty")
 
-    private List<
-            @NotBlank(message = "Authority must not be blank")
-            @Pattern(
-            regexp = "^[A-Za-z]+$",
-            message = "Role name must contain letters only and no numbers")
-            String> authorities;
+    private List<@NotBlank(message = "Authority must not be blank") @Pattern(regexp = "^[A-Za-z]+$", message = "Role name must contain letters only and no numbers") String> authorities;
 }

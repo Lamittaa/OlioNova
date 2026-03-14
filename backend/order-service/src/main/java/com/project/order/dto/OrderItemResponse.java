@@ -16,6 +16,5 @@ public abstract class OrderItemResponse {
     private BigDecimal quantity;
     private BigDecimal price;
     private BigDecimal totalPrice;
-
-    private String status;   // 🔥 أضيفي هذا
+    private String status;   
 }

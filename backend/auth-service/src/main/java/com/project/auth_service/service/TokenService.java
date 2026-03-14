@@ -15,16 +15,14 @@ import java.time.Instant;
 @RequiredArgsConstructor
 public class TokenService {
 
-    private final  TokenRepository repo;
+    private final TokenRepository repo;
 
-
-
-
-    public Token saveAccessToken(User user, String rawToken, Instant expiresAt,String refreshToken, Instant refreshExpiresAt) {
+    public Token saveAccessToken(User user, String rawToken, Instant expiresAt, String refreshToken,
+            Instant refreshExpiresAt) {
         repo.deleteAllByUser(user);
         Token accessToken = Token.builder()
                 .user(user)
-                .accessToken(rawToken)         
+                .accessToken(rawToken)
                 .expiresAt(expiresAt)
                 .revoked(false)
                 .createdAt(Instant.now())
@@ -53,26 +51,26 @@ public class TokenService {
         repo.saveAll(userTokens);
     }
 
-public Token validateUsableRefreshToken(String refreshToken) {
-    Token rt = repo.findByRefreshToken(refreshToken)  // ✅ صح
-            .orElseThrow(() -> new InvalidTokenException("Invalid refresh token"));
+    public Token validateUsableRefreshToken(String refreshToken) {
+        Token rt = repo.findByRefreshToken(refreshToken)
+                .orElseThrow(() -> new InvalidTokenException("Invalid refresh token"));
 
-    if (rt.isRevoked()) {
-        throw new TokenRevokedException("Refresh token revoked");
+        if (rt.isRevoked()) {
+            throw new TokenRevokedException("Refresh token revoked");
+        }
+        if (rt.getRefreshExpiresAt().isBefore(Instant.now())) {
+            throw new TokenExpiredException("Refresh token expired");
+        }
+        return rt;
     }
-    if (rt.getRefreshExpiresAt().isBefore(Instant.now())) { // ✅ استخدمي refreshExpiresAt مش expiresAt
-        throw new TokenExpiredException("Refresh token expired");
-    }
-    return rt;
-}
-
 
     public void revoke(Token accessToken) {
         accessToken.setRevoked(true);
         repo.save(accessToken);
     }
+
     public Token save(Token token) {
-    return repo.save(token);
-}
+        return repo.save(token);
+    }
 
 }

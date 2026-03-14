@@ -10,19 +10,12 @@ import lombok.Data;
 public class ProductionDashboardResponse {
 
     private String line;
-
     private StageType stage;
-
     private StageStatus status;
-
     private long remainingMinutes;
-
     private int queue;
-
     private long eta;
-
     private long avgStageTime;
-
     private int throughputPerHour;
 
 }

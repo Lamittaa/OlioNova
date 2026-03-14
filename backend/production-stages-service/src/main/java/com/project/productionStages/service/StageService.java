@@ -21,134 +21,102 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class StageService {
 
-    private final ProductionStageRepository stageRepository;
-    private final ProductionStageLoggingRepository loggingRepository;
-    private final OrderClient orderClient;
+        private final ProductionStageRepository stageRepository;
+        private final ProductionStageLoggingRepository loggingRepository;
+        private final OrderClient orderClient;
 
-    // =========================================================
-    // START STAGE
-    // =========================================================
-    public void startStage(StartStageRequest request) {
+        public void startStage(StartStageRequest request) {
 
-        ProductionStage stage =
-                stageRepository.findById(request.getStageId())
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "Stage not found with id: " + request.getStageId()
-                                )
-                        );
+                ProductionStage stage = stageRepository.findById(request.getStageId())
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "Stage not found with id: " + request.getStageId()));
 
-        if (stage.getCurrentStatus() == StageStatus.DONE) {
-            throw new BusinessRuleException("Stage already finished");
+                if (stage.getCurrentStatus() == StageStatus.DONE) {
+                        throw new BusinessRuleException("Stage already finished");
+                }
+
+                if (stage.getCurrentStatus() == StageStatus.IN_PROGRESS) {
+                        throw new BusinessRuleException("Stage already started");
+                }
+
+                if (stage.getStageOrder() > 1) {
+
+                        ProductionStage prev = stageRepository.findByOrderItemIdAndStageOrder(
+                                        stage.getOrderItemId(),
+                                        stage.getStageOrder() - 1)
+                                        .orElseThrow(() -> new ResourceNotFoundException("Previous stage not found"));
+
+                        if (prev.getCurrentStatus() != StageStatus.DONE) {
+                                throw new BusinessRuleException("Previous stage must finish first");
+                        }
+                }
+
+                stage.setCurrentStatus(StageStatus.IN_PROGRESS);
+                stageRepository.save(stage);
+
+                ProductionStageLogging log = ProductionStageLogging.builder()
+                                .name(stage.getName())
+                                .stageType(stage.getStageType())
+                                .orderId(stage.getOrderId())
+                                .orderItemId(stage.getOrderItemId())
+                                .line(stage.getLine())
+                                .stageOrder(stage.getStageOrder())
+                                .startTime(LocalDateTime.now())
+                                .userId(request.getUserId())
+                                .build();
+
+                loggingRepository.save(log);
         }
 
-        if (stage.getCurrentStatus() == StageStatus.IN_PROGRESS) {
-            throw new BusinessRuleException("Stage already started");
-        }
+        public void finishStage(FinishStageRequest request) {
 
-        if (stage.getStageOrder() > 1) {
+                ProductionStage stage = stageRepository.findById(request.getStageId())
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "Stage not found with id: " + request.getStageId()));
 
-            ProductionStage prev =
-                    stageRepository.findByOrderItemIdAndStageOrder(
-                                    stage.getOrderItemId(),
-                                    stage.getStageOrder() - 1
-                            )
-                            .orElseThrow(() ->
-                                    new ResourceNotFoundException("Previous stage not found")
-                            );
+                if (stage.getCurrentStatus() == StageStatus.NOT_YET) {
+                        throw new BusinessRuleException("Stage has not started yet");
+                }
 
-            if (prev.getCurrentStatus() != StageStatus.DONE) {
-                throw new BusinessRuleException("Previous stage must finish first");
-            }
-        }
+                if (stage.getCurrentStatus() == StageStatus.DONE) {
+                        throw new BusinessRuleException("Stage already finished");
+                }
 
-        stage.setCurrentStatus(StageStatus.IN_PROGRESS);
-        stageRepository.save(stage);
+                stage.setCurrentStatus(StageStatus.DONE);
+                stageRepository.save(stage);
 
-        ProductionStageLogging log =
-                ProductionStageLogging.builder()
-                        .name(stage.getName())
-                        .stageType(stage.getStageType())
-                        .orderId(stage.getOrderId())
-                        .orderItemId(stage.getOrderItemId())
-                        .line(stage.getLine())
-                        .stageOrder(stage.getStageOrder())
-                        .startTime(LocalDateTime.now())
-                        .userId(request.getUserId())
-                        .build();
-
-        loggingRepository.save(log);
-    }
-
-    // =========================================================
-    // FINISH STAGE
-    // =========================================================
-    public void finishStage(FinishStageRequest request) {
-
-        ProductionStage stage =
-                stageRepository.findById(request.getStageId())
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "Stage not found with id: " + request.getStageId()
-                                )
-                        );
-
-        if (stage.getCurrentStatus() == StageStatus.NOT_YET) {
-            throw new BusinessRuleException("Stage has not started yet");
-        }
-
-        if (stage.getCurrentStatus() == StageStatus.DONE) {
-            throw new BusinessRuleException("Stage already finished");
-        }
-
-        stage.setCurrentStatus(StageStatus.DONE);
-        stageRepository.save(stage);
-
-        ProductionStageLogging log =
-                loggingRepository.findByOrderItemIdAndStageOrder(
+                ProductionStageLogging log = loggingRepository.findByOrderItemIdAndStageOrder(
                                 stage.getOrderItemId(),
-                                stage.getStageOrder()
-                        )
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException("Stage log not found")
-                        );
+                                stage.getStageOrder())
+                                .orElseThrow(() -> new ResourceNotFoundException("Stage log not found"));
 
-        log.setEndTime(LocalDateTime.now());
-        loggingRepository.save(log);
+                log.setEndTime(LocalDateTime.now());
+                loggingRepository.save(log);
 
-        // =========================================================
-        // LAST STAGE → CALL ORDER SERVICE
-        // =========================================================
-        if (stage.getStageType() == StageType.STORAGE) {
+                if (stage.getStageType() == StageType.STORAGE) {
 
-            try {
+                        try {
 
-                orderClient.updateOrderStatus(
-                        stage.getOrderId(),
-                        "COMPLETED"
-                );
+                                orderClient.updateOrderStatus(
+                                                stage.getOrderId(),
+                                                "COMPLETED");
 
-            } catch (FeignException ex) {
+                        } catch (FeignException ex) {
 
-                throw new ServiceUnavailableException(
-                        "Order service is currently unavailable",
-                        "ORDER_SERVICE_DOWN"
-                );
-            }
+                                throw new ServiceUnavailableException(
+                                                "Order service is currently unavailable",
+                                                "ORDER_SERVICE_DOWN");
+                        }
 
-            return;
+                        return;
+                }
+
+                stageRepository.findByOrderItemIdAndStageOrder(
+                                stage.getOrderItemId(),
+                                stage.getStageOrder() + 1)
+                                .ifPresent(next -> {
+                                        next.setCurrentStatus(StageStatus.NOT_YET);
+                                        stageRepository.save(next);
+                                });
         }
-
-        // =========================================================
-        // MOVE TO NEXT STAGE
-        // =========================================================
-        stageRepository.findByOrderItemIdAndStageOrder(
-                        stage.getOrderItemId(),
-                        stage.getStageOrder() + 1
-                )
-                .ifPresent(next -> {
-                    next.setCurrentStatus(StageStatus.NOT_YET);
-                    stageRepository.save(next);
-                });
-    }
 }

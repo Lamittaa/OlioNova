@@ -8,21 +8,19 @@ public class QueueAlgorithmService {
     public int getPreviousGroups(
             int queueNumber,
             int firstWaitingQueue,
-            int lineCount
-    ){
+            int lineCount) {
 
         int diff = queueNumber - firstWaitingQueue;
 
         int groups = diff / lineCount;
 
-        return Math.max(groups,0);
+        return Math.max(groups, 0);
     }
 
     public int getOrderInGroup(
             int queueNumber,
             int firstWaitingQueue,
-            int lineCount
-    ){
+            int lineCount) {
 
         return ((queueNumber - firstWaitingQueue) % lineCount) + 1;
 

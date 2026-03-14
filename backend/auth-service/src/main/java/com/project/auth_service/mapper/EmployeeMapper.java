@@ -8,7 +8,6 @@ import org.mapstruct.*;
 @Mapper(componentModel = "spring")
 public interface EmployeeMapper {
 
-    // ===================== Single Employee =====================
 
     @Mapping(source = "user.username", target = "username")
     @Mapping(source = "user.role.name", target = "role")
@@ -17,7 +16,6 @@ public interface EmployeeMapper {
     @Mapping(source = "martialStatus", target = "maritalStatus")
     EmployeeResponse toResponse(Employee employee);
 
-    // ===================== List =====================
 
     @Mapping(expression = "java(employee.getFirstName() + \" \" + employee.getLastName())", target = "fullName")
     @Mapping(source = "user.username", target = "username")

@@ -10,7 +10,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
-
 @Slf4j
 @RestController
 @RequestMapping("/api/roles")
@@ -19,7 +18,6 @@ public class RoleController {
 
     private final RoleService roleService;
 
-    // ✅ إنشاء دور جديد
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<AddRoleResponseDto> addRole(@Valid @RequestBody AddRoleDto roleDto) {
@@ -28,7 +26,6 @@ public class RoleController {
         return ResponseEntity.status(HttpStatus.CREATED).body(result);
     }
 
-    // ✅ عرض كل الأدوار
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<RoleDto>> getAllRoles() {
@@ -37,7 +34,6 @@ public class RoleController {
         return ResponseEntity.ok(roles);
     }
 
-    // ✅ عرض صلاحيات دور معيّن
     @GetMapping("/{roleId}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<RoleAuthoritiesResponseDto> getAuthoritiesByRole(@PathVariable Long roleId) {
@@ -46,7 +42,6 @@ public class RoleController {
         return ResponseEntity.ok(response);
     }
 
-    // ✅ إضافة صلاحيات جديدة إلى دور معيّن
     @PostMapping("/{roleId}/authorities")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<RoleAuthoritiesResponseDto> addAuthoritiesToRole(
@@ -58,8 +53,6 @@ public class RoleController {
         return ResponseEntity.ok(response);
     }
 
-  
-    // ✅ حذف صلاحية من دور بطريقة RESTful
     @DeleteMapping("/{roleId}/authorities/{authorityName}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<RoleAuthoritiesResponseDto> removeAuthorityFromRole(
@@ -67,17 +60,14 @@ public class RoleController {
             @PathVariable String authorityName) {
 
         log.info("[ADMIN] Remove authority '{}' from role ID {}", authorityName, roleId);
-        RoleAuthoritiesResponseDto response =
-                roleService.removeAuthorityFromRole(roleId, authorityName);
+        RoleAuthoritiesResponseDto response = roleService.removeAuthorityFromRole(roleId, authorityName);
         return ResponseEntity.ok(response);
     }
 
-
-    
     @DeleteMapping("/{roleId}")
-public ResponseEntity<String> deleteRole(@PathVariable Long  roleId) {
-    roleService.deleteRole(roleId);
-    return ResponseEntity.ok("Role deleted successfully");
-}
+    public ResponseEntity<String> deleteRole(@PathVariable Long roleId) {
+        roleService.deleteRole(roleId);
+        return ResponseEntity.ok("Role deleted successfully");
+    }
 
 }

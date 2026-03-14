@@ -23,73 +23,56 @@ import java.util.List;
 @Validated
 public class OrderController {
 
-private final OrderStatusService orderStatusService;
+        private final OrderStatusService orderStatusService;
 
-    private final OrderService orderService;
+        private final OrderService orderService;
 
-    // 1️⃣ Create Order
-    @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN','RECEPTIONIST')")
-    public ResponseEntity<OrderResponse> createOrder(
-            @Valid @RequestBody CreateOrderRequest request
-    ) {
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(orderService.createOrder(request));
-    }
+        @PostMapping
+        @PreAuthorize("hasAnyRole('ADMIN','RECEPTIONIST')")
+        public ResponseEntity<OrderResponse> createOrder(
+                        @Valid @RequestBody CreateOrderRequest request) {
+                return ResponseEntity
+                                .status(HttpStatus.CREATED)
+                                .body(orderService.createOrder(request));
+        }
 
-    // 2️⃣ Get Order By ID
-    @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('ORDER_READ')")
-    public ResponseEntity<OrderResponse> getOrderById(
-            @PathVariable @Min(1) Long id
-    ) {
-        return ResponseEntity.ok(orderService.getOrderById(id));
-    }
+        @GetMapping("/{id}")
+        @PreAuthorize("hasAuthority('ORDER_READ')")
+        public ResponseEntity<OrderResponse> getOrderById(
+                        @PathVariable @Min(1) Long id) {
+                return ResponseEntity.ok(orderService.getOrderById(id));
+        }
 
-    // 3️⃣ Get Orders By Customer
-    @GetMapping
-    @PreAuthorize("hasAuthority('ORDER_READ')")
-    public ResponseEntity<List<OrderResponse>> getOrdersByCustomer(
-            @RequestParam @Min(1) Long customerId
-    ) {
-        return ResponseEntity.ok(orderService.getOrdersByCustomer(customerId));
-    }
+        @GetMapping
+        @PreAuthorize("hasAuthority('ORDER_READ')")
+        public ResponseEntity<List<OrderResponse>> getOrdersByCustomer(
+                        @RequestParam @Min(1) Long customerId) {
+                return ResponseEntity.ok(orderService.getOrdersByCustomer(customerId));
+        }
 
-    // 4️⃣ Cancel Order (Soft Delete)
-    @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','RECEPTIONIST')")
-    public ResponseEntity<Void> cancelOrder(
-            @PathVariable @Min(1) Long id
-    ) {
-        orderService.cancelOrder(id);
-        return ResponseEntity.noContent().build();
-    }
+        @DeleteMapping("/{id}")
+        @PreAuthorize("hasAnyRole('ADMIN','RECEPTIONIST')")
+        public ResponseEntity<Void> cancelOrder(
+                        @PathVariable @Min(1) Long id) {
+                orderService.cancelOrder(id);
+                return ResponseEntity.noContent().build();
+        }
 
+        @GetMapping("/search/by-national-id")
+        @PreAuthorize("hasAuthority('ORDER_READ')")
+        public ResponseEntity<List<OrderResponse>> searchByNationalId(
+                        @RequestParam String nationalId) {
+                return ResponseEntity.ok(
+                                orderService.getOrdersByNationalId(nationalId));
+        }
 
-@GetMapping("/search/by-national-id")
-@PreAuthorize("hasAuthority('ORDER_READ')")
-public ResponseEntity<List<OrderResponse>> searchByNationalId(
-        @RequestParam String nationalId
-) {
-    return ResponseEntity.ok(
-            orderService.getOrdersByNationalId(nationalId)
-    );
-}
- // ================= UPDATE STATUS =================
-   // ================= UPDATE STATUS =================
-@PutMapping("/{id}/status")
-@PreAuthorize("hasAuthority('ORDER_UPDATE_STATUS')")
-public ResponseEntity<OrderResponse> updateOrderStatus(
-        @PathVariable @Min(1) Long id,
-        @Valid @RequestBody UpdateOrderStatusRequest request
-) {
-    return ResponseEntity.ok(
-            orderStatusService.updateStatus(id, request)
-    );
-}
-
-
-    
+        @PutMapping("/{id}/status")
+        @PreAuthorize("hasAuthority('ORDER_UPDATE_STATUS')")
+        public ResponseEntity<OrderResponse> updateOrderStatus(
+                        @PathVariable @Min(1) Long id,
+                        @Valid @RequestBody UpdateOrderStatusRequest request) {
+                return ResponseEntity.ok(
+                                orderStatusService.updateStatus(id, request));
+        }
 
 }

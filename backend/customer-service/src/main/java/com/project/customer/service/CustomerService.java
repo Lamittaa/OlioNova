@@ -1,3 +1,4 @@
+
 package com.project.customer.service;
 
 import com.project.customer.dto.CreateCustomerRequest;
@@ -34,7 +35,8 @@ public class CustomerService {
         }
 
         CityLookup city = cityRepo.findById(req.getCityId())
-                .orElseThrow(() -> new ResourceNotFoundException("City with ID " + req.getCityId() + " does not exist"));
+                .orElseThrow(
+                        () -> new ResourceNotFoundException("City with ID " + req.getCityId() + " does not exist"));
 
         var entity = customerMapper.toEntity(req);
         entity.setCity(city);
@@ -78,11 +80,10 @@ public class CustomerService {
             customer.setFirstName(req.getFirstName());
         }
         if (req.getIsMember() != null) {
-                if (currentUserHasAuthority("MODIFY_IS_MEMBER")) {
-                    customer.setIsMember(req.getIsMember());
-                }
+            if (currentUserHasAuthority("MODIFY_IS_MEMBER")) {
+                customer.setIsMember(req.getIsMember());
+            }
         }
-
 
         var saved = customerRepo.save(customer);
         return customerMapper.toCustomerResponse(saved);
@@ -108,7 +109,8 @@ public class CustomerService {
     // ✅ SEARCH
     public CustomerResponse searchByNationalId(String nationalId) {
         var customer = customerRepo.findByNationalId(nationalId)
-                .orElseThrow(() -> new ResourceNotFoundException("Customer with National ID " + nationalId + " not found"));
+                .orElseThrow(
+                        () -> new ResourceNotFoundException("Customer with National ID " + nationalId + " not found"));
         return customerMapper.toCustomerResponse(customer);
     }
 
@@ -117,8 +119,7 @@ public class CustomerService {
 
         var customer = customerRepo.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Customer with ID " + id + " does not exist"
-                ));
+                        "Customer with ID " + id + " does not exist"));
 
         if (newNationalId.equals(customer.getNationalId())) {
             return customerMapper.toCustomerResponse(customer);
@@ -140,7 +141,7 @@ public class CustomerService {
         var customer = customerRepo.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Customer not found with id: " + id));
 
-        return Boolean.TRUE.equals(customer.getIsMember()); // أو customer.isMember حسب اسم الحقل عندك
+        return Boolean.TRUE.equals(customer.getIsMember());
     }
 
 }

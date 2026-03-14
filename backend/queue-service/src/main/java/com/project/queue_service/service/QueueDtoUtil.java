@@ -12,7 +12,6 @@ public class QueueDtoUtil {
 
     public static QueueResponseDto buildQueueResponse(List<QueueTicket> tickets) {
 
-        // ================= SERVING =================
         List<ServingTicketDto> serving = tickets.stream()
                 .filter(t -> t.getTicketStatus() == TicketStatus.SERVING)
                 .map(t -> new ServingTicketDto(
@@ -30,7 +29,6 @@ public class QueueDtoUtil {
                 ))
                 .toList();
 
-        // ================= WAITING =================
         List<WaitingTicketDto> waiting = tickets.stream()
                 .filter(t -> t.getTicketStatus() == TicketStatus.WAITING)
                 .sorted(Comparator.comparing(QueueTicket::getCreatedAt))
@@ -44,7 +42,6 @@ public class QueueDtoUtil {
                 ))
                 .toList();
 
-        // ================= STATS =================
         int totalWaiting = waiting.size();
 
         int averageWaitTime = calculateAverageWaitTime(tickets);
@@ -63,9 +60,7 @@ public class QueueDtoUtil {
         );
     }
 
-    // =========================================================
-    // WAIT TIME ESTIMATION
-    // =========================================================
+
     private static int estimateWaitMinutes(List<QueueTicket> allTickets, QueueTicket ticket) {
 
         List<QueueTicket> waitingTickets = allTickets.stream()
@@ -75,13 +70,10 @@ public class QueueDtoUtil {
 
         int position = waitingTickets.indexOf(ticket);
 
-        // مثال: كل طلب = 5 دقائق
         return position * 5;
     }
 
-    // =========================================================
-    // AVERAGE WAIT TIME (SERVING ONLY)
-    // =========================================================
+ 
     private static int calculateAverageWaitTime(List<QueueTicket> tickets) {
 
         List<Long> waitTimes = tickets.stream()

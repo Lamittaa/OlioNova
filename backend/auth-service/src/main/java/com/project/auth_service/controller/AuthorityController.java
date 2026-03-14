@@ -19,7 +19,6 @@ public class AuthorityController {
 
     private final AuthorityService authorityService;
 
-    // ✅ Create new authority
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<AuthorityDto> addAuthority(
@@ -30,7 +29,6 @@ public class AuthorityController {
         return ResponseEntity.status(HttpStatus.CREATED).body(result);
     }
 
-    // ✅ Get all authorities
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<AuthorityDto>> getAllAuthorities() {
@@ -39,7 +37,6 @@ public class AuthorityController {
         return ResponseEntity.ok(authorityService.getAllAuthorities());
     }
 
-    // ✅ Get single authority by ID
     @GetMapping("/{authorityId}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<AuthorityDto> getAuthorityById(
@@ -49,7 +46,6 @@ public class AuthorityController {
         return ResponseEntity.ok(authorityService.getAuthorityById(authorityId));
     }
 
-    // ✅ Update authority name
     @PutMapping("/{authorityId}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<AuthorityDto> updateAuthority(
@@ -58,11 +54,9 @@ public class AuthorityController {
 
         log.info("[ADMIN] Update authority {} -> {}", authorityId, dto.getName());
         return ResponseEntity.ok(
-                authorityService.updateAuthority(authorityId, dto)
-        );
+                authorityService.updateAuthority(authorityId, dto));
     }
 
-    // ✅ Delete authority
     @DeleteMapping("/{authorityId}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<String> deleteAuthority(

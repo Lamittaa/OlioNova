@@ -1,6 +1,5 @@
 package com.project.customer.dto;
 
-
 import lombok.Getter;
 import lombok.Setter;
 

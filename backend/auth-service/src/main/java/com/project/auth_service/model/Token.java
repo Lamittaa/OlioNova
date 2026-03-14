@@ -1,4 +1,3 @@
-// src/main/java/com/project/auth_service/model/RefreshToken.java
 package com.project.auth_service.model;
 
 import jakarta.persistence.*;

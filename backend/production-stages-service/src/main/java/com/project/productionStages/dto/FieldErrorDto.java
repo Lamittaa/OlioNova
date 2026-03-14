@@ -10,9 +10,7 @@ import lombok.Setter;
 public class FieldErrorDto {
 
     private String field;
-
     private String message;
-
     private Object rejectedValue;
 
 }

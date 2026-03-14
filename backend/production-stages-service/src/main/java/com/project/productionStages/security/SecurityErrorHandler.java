@@ -28,21 +28,18 @@ public class SecurityErrorHandler implements AuthenticationEntryPoint, AccessDen
 
     @Override
     public void commence(HttpServletRequest req, HttpServletResponse res,
-                         org.springframework.security.core.AuthenticationException ex)
+            org.springframework.security.core.AuthenticationException ex)
             throws IOException, ServletException {
 
-        // افتراضي
         String code = "UNAUTHORIZED";
         String msg = "Unauthorized";
 
-        // إذا كان السبب توكن منتهي/غير صالح
         Throwable cause = ex.getCause();
         if (cause instanceof JwtException) {
             code = "INVALID_TOKEN";
             msg = "Invalid or expired token";
         }
         if (ex instanceof OAuth2AuthenticationException oae) {
-            // أحياناً السبب يطلع هون
             code = "INVALID_TOKEN";
             msg = oae.getError().getDescription() != null ? oae.getError().getDescription() : msg;
         }
@@ -52,7 +49,7 @@ public class SecurityErrorHandler implements AuthenticationEntryPoint, AccessDen
 
     @Override
     public void handle(HttpServletRequest req, HttpServletResponse res,
-                       AccessDeniedException ex) throws IOException, ServletException {
+            AccessDeniedException ex) throws IOException, ServletException {
 
         write(res, HttpStatus.FORBIDDEN, req.getRequestURI(), "FORBIDDEN", "Forbidden");
     }

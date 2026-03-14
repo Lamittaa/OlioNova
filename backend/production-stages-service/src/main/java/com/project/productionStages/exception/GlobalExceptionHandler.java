@@ -27,9 +27,6 @@ import java.util.UUID;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    // =========================
-    // 404
-    // =========================
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleNotFound(
             ResourceNotFoundException ex,
@@ -45,9 +42,7 @@ public class GlobalExceptionHandler {
         );
     }
 
-    // =========================
-    // Business Rule
-    // =========================
+  
     @ExceptionHandler(BusinessRuleException.class)
     public ResponseEntity<ErrorResponse> handleBusiness(
             BusinessRuleException ex,
@@ -63,9 +58,6 @@ public class GlobalExceptionHandler {
         );
     }
 
-    // =========================
-    // Validation
-    // =========================
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidation(
             MethodArgumentNotValidException ex,
@@ -87,9 +79,7 @@ public class GlobalExceptionHandler {
         );
     }
 
-    // =========================
-    // Constraint
-    // =========================
+
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ErrorResponse> handleConstraint(
             ConstraintViolationException ex,
@@ -114,9 +104,7 @@ public class GlobalExceptionHandler {
         );
     }
 
-    // =========================
-    // Method Not Allowed
-    // =========================
+
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<ErrorResponse> handleMethod(
             HttpRequestMethodNotSupportedException ex,
@@ -132,9 +120,7 @@ public class GlobalExceptionHandler {
         );
     }
 
-    // =========================
-    // Unknown Error
-    // =========================
+  
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleUnknown(
             Exception ex,
@@ -154,9 +140,7 @@ public class GlobalExceptionHandler {
         );
     }
 
-    // =========================
-    // Helper Builder
-    // =========================
+
     private ResponseEntity<ErrorResponse> build(
             HttpStatus status,
             String message,

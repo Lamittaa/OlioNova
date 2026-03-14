@@ -27,7 +27,6 @@ public class ProductionEtaService {
 
     public ProductionEtaResponse getEta(Long orderItemId) {
 
-        // 1 جيب المرحلة الجارية
         List<ProductionStage> stages =
                 stageRepository.findByOrderItemId(orderItemId);
 
@@ -38,7 +37,6 @@ public class ProductionEtaService {
 
         if (current == null) return null;
 
-        // 2 جيب الـ log الجاري
         Optional<ProductionStageLogging> logOpt =
                 loggingRepository.findByLineAndStageOrderAndEndTimeIsNull(
                         current.getLine(),
@@ -49,9 +47,6 @@ public class ProductionEtaService {
 
         ProductionStageLogging log = logOpt.get();
 
-        // =========================================================
-        // GET QUEUE NUMBER FROM QUEUE SERVICE
-        // =========================================================
         Integer myQueueNumber;
 
         try {
@@ -69,9 +64,7 @@ public class ProductionEtaService {
 
         if (myQueueNumber == null) return null;
 
-        // =========================================================
-        // FIRST WAITING QUEUE
-        // =========================================================
+  
         Integer firstWaitingQueueNumber =
                 getFirstWaitingQueueNumber(current.getLine());
 
@@ -110,9 +103,7 @@ public class ProductionEtaService {
                 .build();
     }
 
-    // =========================================================
-    // HELPER — أول queue ينتظر
-    // =========================================================
+    
     private Integer getFirstWaitingQueueNumber(String line) {
 
         List<ProductionStage> waitingWashings =

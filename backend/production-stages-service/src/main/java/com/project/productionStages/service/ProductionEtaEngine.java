@@ -13,9 +13,7 @@ public class ProductionEtaEngine {
     private final TimeEstimationService timeService;
     private final QueueAlgorithmService queueAlgo;
 
-    // =========================================================
-    // ETA لطلب ينتظر في الـ Queue
-    // =========================================================
+
     public long calculateEta(
             StageType stageType,
             LocalDateTime stageStartTime,
@@ -36,9 +34,7 @@ public class ProductionEtaEngine {
         return remainingTime + (averageStageTime * previousGroups);
     }
 
-    // =========================================================
-    // حساب وقت انتهاء الطلب في الـ Queue
-    // =========================================================
+
     public long calculateFinishTime(
             StageType stageType,
             LocalDateTime stageStartTime,

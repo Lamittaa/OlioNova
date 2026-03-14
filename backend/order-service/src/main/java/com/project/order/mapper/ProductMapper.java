@@ -11,16 +11,12 @@ import com.project.order.model.ProductLookup;
 @Mapper(componentModel = "spring")
 public interface ProductMapper {
 
-    // Create
     ProductLookup toEntity(CreateProductRequest dto);
 
-    // Response
     ProductResponse toProductResponse(ProductLookup entity);
 
-
-    // Update (partial manual)
     default void updateProductFromDto(UpdateProductRequest dto,
-                                      @MappingTarget ProductLookup entity) {
+            @MappingTarget ProductLookup entity) {
 
         if (dto.getProductName() != null) {
             entity.setProductName(dto.getProductName());

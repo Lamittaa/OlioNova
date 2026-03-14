@@ -17,7 +17,6 @@ public class CreateOrderItemRequest {
     @NotNull
     @Min(1)
     private BigDecimal quantity;
-
     private String oliveType;
     private Integer bagsCount;
     private String note;

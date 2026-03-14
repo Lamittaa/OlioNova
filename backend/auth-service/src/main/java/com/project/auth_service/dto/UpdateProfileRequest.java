@@ -18,8 +18,6 @@ public class UpdateProfileRequest {
     @Email
     private String email;
 
-    // ENUM كـ String عشان المرونة
     @Pattern(regexp = "SINGLE|MARRIED|DIVORCED|WIDOWED")
     private String maritalStatus;
 }
-

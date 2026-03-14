@@ -24,8 +24,7 @@ public class EmailService {
 
             MimeMessage message = mailSender.createMimeMessage();
 
-            MimeMessageHelper helper =
-                    new MimeMessageHelper(message, true, "UTF-8");
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
             helper.setTo(to);
             helper.setSubject("مرحبًا بك في النظام الذكي لمعصرة الجمعية – بيت جالا");
@@ -130,12 +129,12 @@ public class EmailService {
 
                     </body>
                     </html>
-                    """.formatted(username, password);
+                    """
+                    .formatted(username, password);
 
             helper.setText(html, true);
 
-            ClassPathResource logo =
-                    new ClassPathResource("static/logo.jpeg");
+            ClassPathResource logo = new ClassPathResource("static/logo.jpeg");
 
             helper.addInline("logoImage", logo);
 

@@ -30,11 +30,10 @@ public class CreateEmployeeRequest {
     private String email;
 
     @NotNull
-    private String gender;          // MALE / FEMALE (enum check في service)
-
+    private String gender;
     @NotNull
-    private String maritalStatus;   // SINGLE / MARRIED
+    private String maritalStatus;
 
     @NotBlank
-    private String roleName;        // ADMIN / ACCOUNTANT / RECEPTIONIST / TECHNICIAN
+    private String roleName;
 }

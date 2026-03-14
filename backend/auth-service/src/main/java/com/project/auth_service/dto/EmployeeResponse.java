@@ -15,7 +15,6 @@ public class EmployeeResponse {
     private String email;
     private String gender;
     private String maritalStatus;
-
     private String username;
     private String role;
     private boolean enabled;

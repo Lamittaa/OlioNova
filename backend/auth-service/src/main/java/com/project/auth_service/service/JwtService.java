@@ -17,35 +17,21 @@ import java.util.function.Function;
 public class JwtService {
 
     private static final String AUTHORITIES_CLAIM = "authorities";
-    private static final String JTI = "jti"; // معرّف اختياري للتوكن
+    private static final String JTI = "jti";
 
     private final Key key;
     private final long accessExpirationMs;
     private final long refreshExpirationMs;
 
-    // public JwtService(
-    //         @Value("${security.jwt.secret}") String secret,
-    //         @Value("${security.jwt.access-expiration-ms:900000}") long accessExpirationMs,     // 15m
-    //         @Value("${security.jwt.refresh-expiration-ms:604800000}") long refreshExpirationMs // 7d
-    // ) {
-    //     // ملاحظة: تأكد أن الـ secret ≥ 32 بايت (≈ 32+ حرف) لكي يدعم HS256
-    //     this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
-    //     this.accessExpirationMs = accessExpirationMs;
-    //     this.refreshExpirationMs = refreshExpirationMs;
-    // }
     public JwtService(
-        @Value("${security.jwt.secret:MySuperSecretKeyForJwt1234567890MyExtra}") String secret,
-        @Value("${security.jwt.access-expiration-ms:900000}") long accessExpirationMs,
-        @Value("${security.jwt.refresh-expiration-ms:604800000}") long refreshExpirationMs
-) {
-    this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
-    this.accessExpirationMs = accessExpirationMs;
-    this.refreshExpirationMs = refreshExpirationMs;
-}
+            @Value("${security.jwt.secret:MySuperSecretKeyForJwt1234567890MyExtra}") String secret,
+            @Value("${security.jwt.access-expiration-ms:900000}") long accessExpirationMs,
+            @Value("${security.jwt.refresh-expiration-ms:604800000}") long refreshExpirationMs) {
+        this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        this.accessExpirationMs = accessExpirationMs;
+        this.refreshExpirationMs = refreshExpirationMs;
+    }
 
-    // ========================
-    // استخراجات Claims
-    // ========================
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
     }
@@ -56,16 +42,14 @@ public class JwtService {
         Object value = claims.get(AUTHORITIES_CLAIM);
         if (value instanceof List<?> list) {
             List<String> roles = new ArrayList<>();
-            for (Object o : list) if (o != null) roles.add(o.toString());
+            for (Object o : list)
+                if (o != null)
+                    roles.add(o.toString());
             return roles;
         }
         return Collections.emptyList();
     }
 
-    // ========================
-    // توليد التوكنات
-    // ========================
-    /** يولد Access Token قصير العمر ويضع authorities بالـ claims */
     public String generateAccessToken(UserDetails user) {
         Map<String, Object> claims = new HashMap<>();
         claims.put(AUTHORITIES_CLAIM,
@@ -73,21 +57,20 @@ public class JwtService {
         claims.put(JTI, UUID.randomUUID().toString());
         return createToken(claims, user.getUsername(), accessExpirationMs);
     }
-public String generateAccessToken(
-        String username,
-        Collection<String> authorities,
-        Long userId
-) {
-    Map<String, Object> claims = new HashMap<>();
 
-    claims.put(AUTHORITIES_CLAIM, authorities);
-    claims.put("userId", userId);
-    claims.put(JTI, UUID.randomUUID().toString());
+    public String generateAccessToken(
+            String username,
+            Collection<String> authorities,
+            Long userId) {
+        Map<String, Object> claims = new HashMap<>();
 
-    return createToken(claims, username, accessExpirationMs);
-}
+        claims.put(AUTHORITIES_CLAIM, authorities);
+        claims.put("userId", userId);
+        claims.put(JTI, UUID.randomUUID().toString());
 
-    /** يولد Refresh Token أطول عمرًا — بدون authorities (يكفي subject) */
+        return createToken(claims, username, accessExpirationMs);
+    }
+
     public String generateRefreshToken(UserDetails user) {
         Map<String, Object> claims = new HashMap<>();
         claims.put(JTI, UUID.randomUUID().toString());
@@ -102,18 +85,11 @@ public String generateAccessToken(
         return refreshExpirationMs / 1000;
     }
 
-    // ========================
-    // التحقق
-    // ========================
-    /** تحقق للاستخدام مع الـ Access Token */
     public boolean isAccessTokenValid(String token, UserDetails user) {
         final String username = extractUsername(token);
         return username.equals(user.getUsername()) && !isTokenExpired(token);
     }
 
-    // ========================
-    // Helpers
-    // ========================
     private String createToken(Map<String, Object> claims, String subject, long ttlMs) {
         long now = System.currentTimeMillis();
         return Jwts.builder()

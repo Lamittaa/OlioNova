@@ -18,25 +18,22 @@ import java.util.List;
 @RequiredArgsConstructor
 public class QueueUpdateListener {
 
-    private final QueueTicketRepo queueTicketRepo;
-    private final RealtimeNotifier realtimeNotifier;
+        private final QueueTicketRepo queueTicketRepo;
+        private final RealtimeNotifier realtimeNotifier;
 
-    @Async
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void handleQueueUpdated(QueueUpdatedEvent event) {
+        @Async
+        @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+        public void handleQueueUpdated(QueueUpdatedEvent event) {
 
-        var statuses = List.of(TicketStatus.SERVING, TicketStatus.WAITING);
+                var statuses = List.of(TicketStatus.SERVING, TicketStatus.WAITING);
 
-        List<QueueTicket> tickets =
-                queueTicketRepo.findAllByQueueTypeAndQueueDateAndTicketStatusIn(
-                        event.getQueueType(),
-                        LocalDate.now(),
-                        statuses
-                );
+                List<QueueTicket> tickets = queueTicketRepo.findAllByQueueTypeAndQueueDateAndTicketStatusIn(
+                                event.getQueueType(),
+                                LocalDate.now(),
+                                statuses);
 
-        QueueResponseDto responseDto =
-                QueueDtoUtil.buildQueueResponse(tickets);
+                QueueResponseDto responseDto = QueueDtoUtil.buildQueueResponse(tickets);
 
-        realtimeNotifier.publishUpdate(event.getQueueType(), responseDto);
-    }
+                realtimeNotifier.publishUpdate(event.getQueueType(), responseDto);
+        }
 }

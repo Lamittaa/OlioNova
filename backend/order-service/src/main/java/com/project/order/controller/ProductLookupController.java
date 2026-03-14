@@ -16,12 +16,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
-
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
-
 import lombok.RequiredArgsConstructor;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -43,7 +40,6 @@ public class ProductLookupController {
 
     private final ProductLookupService productService;
 
-    // ================= CREATE =================
     @PostMapping
     @PreAuthorize("hasRole('ADMIN') and hasAuthority('PRODUCT_CREATE')")
     @Operation(summary = "Create a new product")
@@ -140,7 +136,6 @@ public class ProductLookupController {
         return ResponseEntity.status(HttpStatus.CREATED).body(productService.createProduct(request));
     }
 
-    // ================= GET BY ID =================
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTIONIST','ACCOUNTANT') and hasAuthority('PRODUCT_READ')")
     @Operation(summary = "Get product by ID (active only)")
@@ -176,7 +171,6 @@ public class ProductLookupController {
         return ResponseEntity.ok(productService.getProductById(id));
     }
 
-    // ================= GET ALL =================
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTIONIST','ACCOUNTANT') and hasAuthority('PRODUCT_READ')")
     @Operation(summary = "Get all products (active only)")
@@ -218,7 +212,6 @@ public class ProductLookupController {
         return ResponseEntity.ok(productService.getAllProducts());
     }
 
-    // ================= UPDATE =================
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN') and hasAuthority('PRODUCT_UPDATE')")
     @Operation(summary = "Update a product (active only)")
@@ -261,7 +254,6 @@ public class ProductLookupController {
         return ResponseEntity.ok(productService.updateProduct(id, request));
     }
 
-    // ================= PATCH INVENTORY =================
     @PatchMapping("/{id}/inventory")
     @PreAuthorize("hasAnyRole('ADMIN','ACCOUNTANT') and hasAuthority('PRODUCT_UPDATE_INVENTORY')")
     @Operation(summary = "Update product inventory (active only)")
@@ -296,7 +288,6 @@ public class ProductLookupController {
         return ResponseEntity.ok(productService.updateInventory(id, request));
     }
 
-    // ================= DELETE (SOFT) =================
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN') and hasAuthority('PRODUCT_DELETE')")
     @Operation(summary = "Deactivate a product (soft delete)")
@@ -315,7 +306,6 @@ public class ProductLookupController {
     }
 
 
-    // ================= ACTIVATE =================
     @PatchMapping("/{id}/activate")
     @PreAuthorize("hasRole('ADMIN') and hasAuthority('PRODUCT_UPDATE')")
     @Operation(summary = "Activate a product (undo soft delete)")

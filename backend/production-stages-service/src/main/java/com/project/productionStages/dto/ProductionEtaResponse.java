@@ -9,15 +9,11 @@ import lombok.Data;
 public class ProductionEtaResponse {
 
     private Long orderItemId;
-
+    
     private String line;
-
     private StageType currentStage;
-
     private long remainingMinutes;
-
     private int queue;
-
     private long eta;
 
 }

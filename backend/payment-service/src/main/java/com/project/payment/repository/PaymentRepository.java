@@ -12,13 +12,11 @@ import org.springframework.data.jpa.repository.Query;
 
 public interface PaymentRepository extends JpaRepository<Payment, Long> {
 Optional<Payment> findByOrderId(Long orderId);
-   // ===== للتقرير اليومي =====
     List<Payment> findByPaymentDateBetween(
             LocalDateTime start,
             LocalDateTime end
     );
 
-    // ===== مجموع المبلغ =====
     @Query("""
         SELECT COALESCE(SUM(p.totalPrice), 0)
         FROM Payment p

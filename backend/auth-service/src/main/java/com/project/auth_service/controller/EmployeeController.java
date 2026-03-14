@@ -24,10 +24,6 @@ public class EmployeeController {
     private final EmployeeMapper employeeMapper;
     private final ProfileMapper profileMapper;
 
-    // =========================================================
-    // ADMIN APIs
-    // =========================================================
-
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<EmployeeResponse> create(
@@ -53,15 +49,14 @@ public class EmployeeController {
                 employeeService.getEmployeeById(id));
     }
 
- @PatchMapping("/profile")
+    @PatchMapping("/profile")
     @PreAuthorize("hasAuthority('VIEW_PROFILE')")
     public ProfileResponse updateMyProfile(
             Authentication auth,
             @Valid @RequestBody UpdateProfileRequest req) {
 
         Employee updated = employeeService.updateMyProfile(
-                auth.getName(), req
-        );
+                auth.getName(), req);
 
         return profileMapper.toProfile(updated);
     }
@@ -73,17 +68,12 @@ public class EmployeeController {
         employeeService.disableEmployee(id);
     }
 
-   @GetMapping("/by-national-id/{nid}")
-@PreAuthorize("hasRole('ADMIN')")
-public EmployeeResponse getByNationalId(@PathVariable String nid) {
-    Employee employee = employeeService.getByNationalId(nid);
-    return employeeMapper.toResponse(employee);
-}
-
-
-    // =========================================================
-    // PROFILE APIs (SELF)
-    // =========================================================
+    @GetMapping("/by-national-id/{nid}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public EmployeeResponse getByNationalId(@PathVariable String nid) {
+        Employee employee = employeeService.getByNationalId(nid);
+        return employeeMapper.toResponse(employee);
+    }
 
     @GetMapping("/profile")
     @PreAuthorize("hasAuthority('VIEW_PROFILE')")
@@ -91,8 +81,6 @@ public EmployeeResponse getByNationalId(@PathVariable String nid) {
         Employee emp = employeeService.getMyProfile(auth.getName());
         return profileMapper.toProfile(emp);
     }
-
-
 
     @PostMapping("/profile/change-password")
     @PreAuthorize("hasAuthority('VIEW_PROFILE')")

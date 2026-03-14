@@ -18,7 +18,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
-
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -26,7 +25,7 @@ public class RoleService {
 
     private final RoleRepository roleRepository;
     private final AuthorityRepository authorityRepository;
-     private final UserRepository userRepository;
+    private final UserRepository userRepository;
     private final RoleMapper roleMapper;
 
     @Transactional
@@ -88,47 +87,44 @@ public class RoleService {
                 .build();
     }
 
-@Transactional
-public RoleAuthoritiesResponseDto removeAuthorityFromRole(Long roleId, String authorityName) {
-    Role role = roleRepository.findById(roleId)
-            .orElseThrow(() -> new EntityNotFoundException("Role not found with ID=" + roleId));
+    @Transactional
+    public RoleAuthoritiesResponseDto removeAuthorityFromRole(Long roleId, String authorityName) {
+        Role role = roleRepository.findById(roleId)
+                .orElseThrow(() -> new EntityNotFoundException("Role not found with ID=" + roleId));
 
-    Authority authority = authorityRepository.findByNameIgnoreCase(authorityName)
-            .orElseThrow(() -> new EntityNotFoundException("Authority not found: " + authorityName));
+        Authority authority = authorityRepository.findByNameIgnoreCase(authorityName)
+                .orElseThrow(() -> new EntityNotFoundException("Authority not found: " + authorityName));
 
-    if (!role.getAuthorities().contains(authority)) {
-        throw new AuthorityNotAssignedException(
-                String.format("Role '%s' (ID=%d) does not contain authority: %s",
-                        role.getName(), role.getId(), authorityName)
-        );
+        if (!role.getAuthorities().contains(authority)) {
+            throw new AuthorityNotAssignedException(
+                    String.format("Role '%s' (ID=%d) does not contain authority: %s",
+                            role.getName(), role.getId(), authorityName));
+        }
+
+        role.getAuthorities().remove(authority);
+        roleRepository.save(role);
+
+        log.info("[ROLE] Authority '{}' removed from role '{}'", authorityName, role.getName());
+
+        return RoleAuthoritiesResponseDto.builder()
+                .roleId(role.getId())
+                .roleName(role.getName())
+                .authorities(role.getAuthorities().stream().map(Authority::getName).toList())
+                .message("Authority '" + authorityName + "' removed successfully from role")
+                .build();
     }
 
-    role.getAuthorities().remove(authority);
-    roleRepository.save(role);
+    @Transactional
+    public void deleteRole(Long roleId) {
+        Role role = roleRepository.findById(roleId)
+                .orElseThrow(() -> new RoleNotFoundException("Role with ID " + roleId + " not found"));
 
-    log.info("[ROLE] Authority '{}' removed from role '{}'", authorityName, role.getName());
+        boolean roleInUse = userRepository.existsByRole_Id(roleId);
+        if (roleInUse) {
+            throw new EntityInUseException("Cannot delete role because it is assigned to existing users.");
+        }
 
-    return RoleAuthoritiesResponseDto.builder()
-            .roleId(role.getId())
-            .roleName(role.getName())
-            .authorities(role.getAuthorities().stream().map(Authority::getName).toList())
-            .message("Authority '" + authorityName + "' removed successfully from role")
-            .build();
-}
-@Transactional
-public void deleteRole(Long roleId) {
-    Role role = roleRepository.findById(roleId)
-            .orElseThrow(() -> new RoleNotFoundException("Role with ID " + roleId + " not found"));
-
-    boolean roleInUse = userRepository.existsByRole_Id(roleId);
-    if (roleInUse) {
-        throw new EntityInUseException("Cannot delete role because it is assigned to existing users.");
+        roleRepository.delete(role);
     }
 
-    roleRepository.delete(role);
 }
-
-
-}
-
-

@@ -150,30 +150,25 @@ public ResponseEntity<ErrorResponse> handleCustomerNotFound(
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErrorResponse> handleHttpMessageNotReadable(HttpMessageNotReadableException ex, HttpServletRequest req) {
 
-        // 1) Body مش موجود
         String rawMsg = ex.getMessage() == null ? "" : ex.getMessage();
         if (rawMsg.contains("Required request body is missing")) {
             return build(HttpStatus.BAD_REQUEST, "Request body is required", req, "REQUEST_BODY_MISSING", null);
         }
 
-        // الأهم: هاد بيجيب السبب الحقيقي غالبًا
         Throwable cause = ex.getMostSpecificCause();
 
-        // 2) JSON Syntax غلط
         if (cause instanceof JsonParseException jpe) {
             String msg = "Malformed JSON. Check syntax near line " + jpe.getLocation().getLineNr()
                     + ", column " + jpe.getLocation().getColumnNr();
             return build(HttpStatus.BAD_REQUEST, msg, req, "MALFORMED_JSON", null);
         }
 
-        // 3) Field اسمه غلط
         if (cause instanceof UnrecognizedPropertyException upe) {
             String field = upe.getPropertyName();
             List<FieldErrorDto> errors = List.of(new FieldErrorDto(field, "Unknown field in JSON", null));
             return build(HttpStatus.BAD_REQUEST, "Unknown field: " + field, req, "UNKNOWN_FIELD", errors);
         }
 
-        // 4) نوع البيانات غلط
         if (cause instanceof InvalidFormatException ife) {
             String fieldPath = toPath(ife);
             Object badValue = ife.getValue();
@@ -192,7 +187,6 @@ public ResponseEntity<ErrorResponse> handleCustomerNotFound(
             );
         }
 
-        // 5) Structure مش compatible
         if (cause instanceof MismatchedInputException mie) {
             String fieldPath = toPath(mie);
             String msg = "JSON structure is not compatible with request DTO";
@@ -203,7 +197,6 @@ public ResponseEntity<ErrorResponse> handleCustomerNotFound(
             return build(HttpStatus.BAD_REQUEST, msg, req, "MISMATCHED_INPUT", errors);
         }
 
-        // default
         return build(HttpStatus.BAD_REQUEST, "Malformed JSON request", req, "MALFORMED_JSON", null);
     }
 

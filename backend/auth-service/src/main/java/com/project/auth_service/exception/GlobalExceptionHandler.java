@@ -18,7 +18,6 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -26,7 +25,6 @@ import java.util.UUID;
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
-
 
     @ExceptionHandler(RoleNotFoundException.class)
     public ResponseEntity<ErrorResponseDto> handleRoleNotFound(RoleNotFoundException ex, HttpServletRequest req) {
@@ -38,8 +36,7 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.NOT_FOUND, ex.getMessage(), req, "USER_NOT_FOUND", null);
     }
 
-
-    @ExceptionHandler({BadCredentialsException.class, AuthenticationException.class})
+    @ExceptionHandler({ BadCredentialsException.class, AuthenticationException.class })
     public ResponseEntity<ErrorResponseDto> handleAuth(AuthenticationException ex, HttpServletRequest req) {
         log.warn("Authentication failed from IP={} - {}", req.getRemoteAddr(), ex.getMessage());
         return build(HttpStatus.UNAUTHORIZED, "Invalid username or password", req, "BAD_CREDENTIALS", null);
@@ -57,7 +54,6 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.CONFLICT, ex.getMessage(), req, "Entity_IN_USE", null);
     }
 
-
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorResponseDto> handleForbidden(AccessDeniedException ex, HttpServletRequest req) {
         return build(HttpStatus.FORBIDDEN, "Access is denied", req, "ACCESS_DENIED", null);
@@ -68,9 +64,9 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.BAD_REQUEST, ex.getMessage(), req, "BAD_REQUEST", null);
     }
 
-
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ErrorResponseDto> handleValidation(MethodArgumentNotValidException ex, HttpServletRequest req) {
+    public ResponseEntity<ErrorResponseDto> handleValidation(MethodArgumentNotValidException ex,
+            HttpServletRequest req) {
         List<FieldErrorDto> fieldErrors = ex.getBindingResult()
                 .getFieldErrors()
                 .stream()
@@ -88,17 +84,20 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(MissingServletRequestParameterException.class)
-    public ResponseEntity<ErrorResponseDto> handleMissingParam(MissingServletRequestParameterException ex, HttpServletRequest req) {
+    public ResponseEntity<ErrorResponseDto> handleMissingParam(MissingServletRequestParameterException ex,
+            HttpServletRequest req) {
         return build(HttpStatus.BAD_REQUEST, ex.getMessage(), req, "MISSING_PARAMETER", null);
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<ErrorResponseDto> handleJsonParse(HttpMessageNotReadableException ex, HttpServletRequest req) {
+    public ResponseEntity<ErrorResponseDto> handleJsonParse(HttpMessageNotReadableException ex,
+            HttpServletRequest req) {
         return build(HttpStatus.BAD_REQUEST, "Malformed JSON request", req, "MALFORMED_JSON", null);
     }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
-    public ResponseEntity<ErrorResponseDto> handleMethodNotAllowed(HttpRequestMethodNotSupportedException ex, HttpServletRequest req) {
+    public ResponseEntity<ErrorResponseDto> handleMethodNotAllowed(HttpRequestMethodNotSupportedException ex,
+            HttpServletRequest req) {
         return build(HttpStatus.METHOD_NOT_ALLOWED, ex.getMessage(), req, "METHOD_NOT_ALLOWED", null);
     }
 
@@ -115,28 +114,27 @@ public class GlobalExceptionHandler {
                 null);
     }
 
-
     @ExceptionHandler(AuthorityNotAssignedException.class)
-    public ResponseEntity<ErrorResponseDto> handleAuthorityNotAssignedException(AuthorityNotAssignedException ex, HttpServletRequest req) {
+    public ResponseEntity<ErrorResponseDto> handleAuthorityNotAssignedException(AuthorityNotAssignedException ex,
+            HttpServletRequest req) {
         log.warn("Authority not assigned: {}", ex.getMessage());
         return build(HttpStatus.BAD_REQUEST, ex.getMessage(), req, "AUTHORITY_NOT_ASSIGNED", null);
     }
 
-
     // 🔹 Refresh Token Errors
-    @ExceptionHandler({InvalidTokenException.class})
+    @ExceptionHandler({ InvalidTokenException.class })
     public ResponseEntity<ErrorResponseDto> handleInvalidRefresh(InvalidTokenException ex, HttpServletRequest req) {
         log.warn("Invalid refresh token: {}", ex.getMessage());
         return build(HttpStatus.UNAUTHORIZED, ex.getMessage(), req, "REFRESH_TOKEN_INVALID", null);
     }
 
-    @ExceptionHandler({TokenExpiredException.class})
+    @ExceptionHandler({ TokenExpiredException.class })
     public ResponseEntity<ErrorResponseDto> handleRefreshExpired(TokenExpiredException ex, HttpServletRequest req) {
         log.warn("Expired refresh token: {}", ex.getMessage());
         return build(HttpStatus.UNAUTHORIZED, ex.getMessage(), req, "REFRESH_TOKEN_EXPIRED", null);
     }
 
-    @ExceptionHandler({TokenRevokedException.class})
+    @ExceptionHandler({ TokenRevokedException.class })
     public ResponseEntity<ErrorResponseDto> handleRefreshRevoked(TokenRevokedException ex, HttpServletRequest req) {
         log.warn("Revoked refresh token used: {}", ex.getMessage());
         return build(HttpStatus.UNAUTHORIZED, ex.getMessage(), req, "REFRESH_TOKEN_REVOKED", null);
@@ -148,29 +146,28 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.BAD_REQUEST, ex.getMessage(), req, "LOGOUT_ERROR", null);
     }
 
-@ExceptionHandler(EmployeeNotFoundException.class)
-public ResponseEntity<ErrorResponseDto> handleEmployeeNotFound(
-        EmployeeNotFoundException ex,
-        HttpServletRequest req
-) {
-    log.warn("Employee not found: {}", ex.getMessage());
-    return build(
-            HttpStatus.NOT_FOUND,
-            ex.getMessage(),
-            req,
-            "EMPLOYEE_NOT_FOUND",
-            null
-    );
-}
+    @ExceptionHandler(EmployeeNotFoundException.class)
+    public ResponseEntity<ErrorResponseDto> handleEmployeeNotFound(
+            EmployeeNotFoundException ex,
+            HttpServletRequest req) {
+        log.warn("Employee not found: {}", ex.getMessage());
+        return build(
+                HttpStatus.NOT_FOUND,
+                ex.getMessage(),
+                req,
+                "EMPLOYEE_NOT_FOUND",
+                null);
+    }
 
     @ExceptionHandler(EntityAlreadyExistsException.class)
-    public ResponseEntity<ErrorResponseDto> handleEntityAlreadyExists(EntityAlreadyExistsException ex, HttpServletRequest req) {
+    public ResponseEntity<ErrorResponseDto> handleEntityAlreadyExists(EntityAlreadyExistsException ex,
+            HttpServletRequest req) {
         return build(HttpStatus.CONFLICT, ex.getMessage(), req, "ENTITY_ALREADY_EXISTS", null);
     }
 
     // ---------- Helpers ----------
     private ResponseEntity<ErrorResponseDto> build(HttpStatus status, String msg, HttpServletRequest req,
-                                                   String code, List<FieldErrorDto> fieldErrors) {
+            String code, List<FieldErrorDto> fieldErrors) {
         ErrorResponseDto body = ErrorResponseDto.builder()
                 .timestamp(Instant.now())
                 .status(status.value())
@@ -186,6 +183,5 @@ public ResponseEntity<ErrorResponseDto> handleEmployeeNotFound(
     private FieldErrorDto toFieldErrorDto(FieldError fe) {
         return new FieldErrorDto(fe.getField(), fe.getDefaultMessage(), fe.getRejectedValue());
     }
-
 
 }

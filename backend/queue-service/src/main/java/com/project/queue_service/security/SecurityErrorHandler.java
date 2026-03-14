@@ -31,18 +31,15 @@ public class SecurityErrorHandler implements AuthenticationEntryPoint, AccessDen
                          org.springframework.security.core.AuthenticationException ex)
             throws IOException, ServletException {
 
-        // افتراضي
         String code = "UNAUTHORIZED";
         String msg = "Unauthorized";
 
-        // إذا كان السبب توكن منتهي/غير صالح
         Throwable cause = ex.getCause();
         if (cause instanceof JwtException) {
             code = "INVALID_TOKEN";
             msg = "Invalid or expired token";
         }
         if (ex instanceof OAuth2AuthenticationException oae) {
-            // أحياناً السبب يطلع هون
             code = "INVALID_TOKEN";
             msg = oae.getError().getDescription() != null ? oae.getError().getDescription() : msg;
         }

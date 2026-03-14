@@ -1,3 +1,4 @@
+
 package com.project.order.mapper;
 
 import com.project.order.dto.CreateOrderStatusResponse;
@@ -8,9 +9,6 @@ import org.mapstruct.MappingTarget;
 
 @Mapper(componentModel = "spring")
 public interface OrderStatusMapper {
-
-    // لو مستقبلًا بدك create request ممكن تضيفي toEntity(CreateOrderStatusRequest dto)
-    // حالياً الجدول lookup لذلك مش ضروري
 
     CreateOrderStatusResponse toCreateOrderStatusResponse(OrderStatus entity);
 

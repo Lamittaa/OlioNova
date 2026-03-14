@@ -18,21 +18,15 @@ public class FeignAuthForwardConfig {
 
             @Override
             public void apply(RequestTemplate template) {
-
-                ServletRequestAttributes attributes =
-                        (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+                ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder
+                        .getRequestAttributes();
 
                 if (attributes == null) {
                     return;
                 }
-
                 HttpServletRequest request = attributes.getRequest();
-
-                String authorization =
-                        request.getHeader("Authorization");
-
+                String authorization = request.getHeader("Authorization");
                 if (authorization != null) {
-
                     template.header("Authorization", authorization);
 
                 }

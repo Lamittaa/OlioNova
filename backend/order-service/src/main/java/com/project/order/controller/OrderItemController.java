@@ -33,9 +33,7 @@ public class OrderItemController {
 
         private final OrderItemService orderItemService;
 
-        // =========================================================
-        // GET ALL ITEMS
-        // =========================================================
+     
         @GetMapping
         @PreAuthorize("hasAuthority('ORDER_ITEM_READ')")
         @Operation(summary = "Get order items", description = "Returns all items for a given order")
@@ -49,9 +47,6 @@ public class OrderItemController {
                 return ResponseEntity.ok(orderItemService.getItems(orderId));
         }
 
-        // =========================================================
-        // GET SINGLE ITEM
-        // =========================================================
         @GetMapping("/{itemId}")
         @PreAuthorize("hasAuthority('ORDER_ITEM_READ')")
         @Operation(summary = "Get order item", description = "Returns a single item from an order")
@@ -67,9 +62,7 @@ public class OrderItemController {
                                 orderItemService.getItem(orderId, itemId));
         }
 
-        // =========================================================
-        // ADD ITEM
-        // =========================================================
+
         @PostMapping
         @PreAuthorize("hasAnyRole('ADMIN','RECEPTIONIST') and hasAuthority('ORDER_ITEM_ADD')")
         @Operation(summary = "Add item to order", description = """
@@ -92,9 +85,6 @@ public class OrderItemController {
                                 orderItemService.addItem(orderId, request));
         }
 
-        // =========================================================
-        // UPDATE ITEM
-        // =========================================================
         @PutMapping("/{itemId}")
         @PreAuthorize("hasAnyRole('ADMIN','RECEPTIONIST') and hasAuthority('ORDER_ITEM_UPDATE')")
         @Operation(summary = "Update order item", description = """
@@ -116,9 +106,6 @@ public class OrderItemController {
                                 orderItemService.updateItem(orderId, itemId, request));
         }
 
-        // =========================================================
-        // DELETE ITEM
-        // =========================================================
         @DeleteMapping("/{itemId}")
         @PreAuthorize("hasAnyRole('ADMIN','RECEPTIONIST') and hasAuthority('ORDER_ITEM_DELETE')")
         @Operation(summary = "Delete order item", description = "Deletes an item from an order (only allowed in SUBMITTED status)")

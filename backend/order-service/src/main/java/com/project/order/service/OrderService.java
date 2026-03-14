@@ -15,10 +15,8 @@ import com.project.order.model.ProductLookup;
 import com.project.order.repository.OrderRepo;
 import com.project.order.repository.OrderStatusRepo;
 import com.project.order.repository.ProductLookupRepo;
-
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
-
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,317 +31,274 @@ import java.util.Set;
 @Transactional
 public class OrderService {
 
-    private final OrderRepo orderRepo;
-    private final ProductLookupRepo productRepo;
-    private final OrderStatusRepo statusRepo;
-    private final CustomerClient customerClient;
-    private final OrderMapper orderMapper;
-    private final OrderItemMapper orderItemMapper;
-private final NotificationClient notificationClient;
-    // ================= CREATE =================
-    public OrderResponse createOrder(CreateOrderRequest request) {
+        private final OrderRepo orderRepo;
+        private final ProductLookupRepo productRepo;
+        private final OrderStatusRepo statusRepo;
+        private final CustomerClient customerClient;
+        private final OrderMapper orderMapper;
+        private final OrderItemMapper orderItemMapper;
+        private final NotificationClient notificationClient;
 
-        validateOrderItems(request.getItems());
+        public OrderResponse createOrder(CreateOrderRequest request) {
 
-        boolean isMember = fetchMembership(request.getCustomerId());
-        OrderStatus submitted = getStatus("SUBMITTED");
+                validateOrderItems(request.getItems());
 
-        Order order = new Order();
-        order.setCustomerId(request.getCustomerId());
-        order.setStatus(submitted);
-        order.setCreatedAt(LocalDateTime.now());
+                boolean isMember = fetchMembership(request.getCustomerId());
+                OrderStatus submitted = getStatus("SUBMITTED");
 
-        for (CreateOrderItemRequest dto : request.getItems()) {
-            order.getItems().add(buildItem(order, dto, isMember));
-        }
+                Order order = new Order();
+                order.setCustomerId(request.getCustomerId());
+                order.setStatus(submitted);
+                order.setCreatedAt(LocalDateTime.now());
 
-        recalcTotal(order);
-
-        Order savedOrder = orderRepo.save(order);
-
-// هنا نرسل SMS
-notificationClient.sendSms(
-        "+972585800246",
-        "Your olive order has been submitted successfully."
-);
-
-return buildOrderResponse(savedOrder);
-    }
-
-    // ================= READ =================
-    @Transactional(readOnly = true)
-    public OrderResponse getOrderById(Long id) {
-
-        Order order = orderRepo.findById(id)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Order not found with id: " + id
-                        )
-                );
-
-        return buildOrderResponse(order);
-    }
-
-    @Transactional(readOnly = true)
-    public List<OrderResponse> getOrdersByCustomer(Long customerId) {
-
-        return orderRepo.findByCustomerId(customerId)
-                .stream()
-                .map(this::buildOrderResponse)
-                .toList();
-    }
-
-    // ================= CANCEL =================
-    public void cancelOrder(Long id) {
-
-        Order order = orderRepo.findById(id)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Order not found with id: " + id
-                        )
-                );
-
-        OrderStatus canceled = getStatus("CANCELED");
-
-        order.setStatus(canceled);
-        order.setUpdatedAt(LocalDateTime.now());
-
-        order.getItems().forEach(item -> {
-            item.setStatus(canceled);
-            item.setUpdatedAt(LocalDateTime.now());
-        });
-    }
-
-    // ================= PAY =================
-    public void payOrder(Long orderId) {
-
-        Order order = orderRepo.findById(orderId)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Order not found with id: " + orderId
-                        )
-                );
-
-        String status = order.getStatus().getStatusName();
-
-        if (!"SUBMITTED".equalsIgnoreCase(status)) {
-            throw new InvalidOrderStatusTransitionException(
-                    "Order cannot be paid in status: " + status
-            );
-        }
-
-        boolean hasRefundedItem = order.getItems().stream()
-                .anyMatch(i ->
-                        i.getStatus() != null &&
-                        i.getStatus().getStatusName()
-                                .equalsIgnoreCase("REFUNDED")
-                );
-
-        if (hasRefundedItem) {
-            throw new InvalidOrderStatusTransitionException(
-                    "Cannot pay order with refunded items"
-            );
-        }
-
-        OrderStatus paidStatus = getStatus("PAID");
-
-        order.setStatus(paidStatus);
-        order.setUpdatedAt(LocalDateTime.now());
-
-        order.getItems().forEach(item -> {
-            if (item.getStatus().getStatusName()
-                    .equalsIgnoreCase("SUBMITTED")) {
-
-                item.setStatus(paidStatus);
-                item.setUpdatedAt(LocalDateTime.now());
-            }
-        });
-
-        orderRepo.save(order);
-    }
-
-    // ================= RESPONSE =================
-    private OrderResponse buildOrderResponse(Order order) {
-
-        OrderResponse response = orderMapper.toOrderResponse(order);
-
-        response.setItems(
-                order.getItems()
-                        .stream()
-                        .map(orderItemMapper::toResponse)
-                        .toList()
-        );
-
-        return response;
-    }
-
-    // ================= HELPERS =================
-    private void recalcTotal(Order order) {
-
-        order.setTotalPrice(
-                order.getItems()
-                        .stream()
-                        .map(OrderItem::getTotalPrice)
-                        .reduce(BigDecimal.ZERO, BigDecimal::add)
-        );
-    }
-
-    private BigDecimal computePrice(ProductLookup product, boolean isMember) {
-
-        if (!isMember || product.getMemberDiscount() == null) {
-            return product.getPrice();
-        }
-
-        return product.getPrice()
-                .multiply(BigDecimal.ONE.subtract(product.getMemberDiscount()));
-    }
-
-    private OrderStatus getStatus(String status) {
-
-        return statusRepo.findByStatusNameIgnoreCase(status)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "OrderStatus not found: " + status
-                        )
-                );
-    }
-
-    // ================= CUSTOMER SERVICE CALL =================
-    private boolean fetchMembership(Long customerId) {
-
-        try {
-
-            return customerClient
-                    .getMembership(customerId)
-                    .isMembership();
-
-        } catch (FeignException.NotFound e) {
-
-            throw new ResourceNotFoundException(
-                    "Customer not found with id: " + customerId
-            );
-
-        } catch (FeignException e) {
-
-            throw new ServiceUnavailableException(
-                    "Customer service is currently unavailable"
-            );
-        }
-    }
-
-    // ================= VALIDATION =================
-    private void validateOrderItems(List<CreateOrderItemRequest> items) {
-
-        if (items == null || items.isEmpty()) {
-            throw new InvalidOrderItemsException(
-                    "Order must contain at least one item"
-            );
-        }
-
-        Set<Long> purchaseProducts = new HashSet<>();
-        Set<String> oliveServices = new HashSet<>();
-
-        for (CreateOrderItemRequest item : items) {
-
-            ProductLookup product = productRepo.findById(item.getProductId())
-                    .orElseThrow(() ->
-                            new InvalidOrderItemsException(
-                                    "Invalid productId"
-                            )
-                    );
-
-            if ("SERVICE".equals(product.getProductType())) {
-
-                if (item.getOliveType() == null ||
-                        item.getBagsCount() == null) {
-
-                    throw new InvalidOrderItemsException(
-                            "Service requires oliveType & bagsCount"
-                    );
+                for (CreateOrderItemRequest dto : request.getItems()) {
+                        order.getItems().add(buildItem(order, dto, isMember));
                 }
 
-                String key = product.getId() + "|" + item.getOliveType();
+                recalcTotal(order);
 
-                if (!oliveServices.add(key)) {
+                Order savedOrder = orderRepo.save(order);
 
-                    throw new InvalidOrderItemsException(
-                            "Duplicate service with same oliveType"
-                    );
-                }
+                notificationClient.sendSms(
+                                "+972585800246",
+                                "Your olive order has been submitted successfully.");
 
-            } else {
-
-                if (!purchaseProducts.add(product.getId())) {
-
-                    throw new InvalidOrderItemsException(
-                            "Duplicate purchase product"
-                    );
-                }
-            }
-        }
-    }
-
-    // ================= ITEM BUILDER =================
-    private OrderItem buildItem(Order order,
-                                CreateOrderItemRequest dto,
-                                boolean isMember) {
-
-        ProductLookup product = productRepo.findById(dto.getProductId())
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Product not found"
-                        )
-                );
-
-        OrderItem item = new OrderItem();
-
-        item.setOrder(order);
-        item.setProductId(product.getId());
-        item.setProductName(product.getProductName());
-        item.setProductType(product.getProductType());
-        item.setQuantity(dto.getQuantity());
-        item.setOliveType(dto.getOliveType());
-        item.setBagsCount(dto.getBagsCount());
-        item.setNote(dto.getNote());
-
-        BigDecimal price = computePrice(product, isMember);
-
-        item.setPrice(price);
-        item.setTotalPrice(price.multiply(dto.getQuantity()));
-        item.setStatus(getStatus("SUBMITTED"));
-        item.setCreatedAt(LocalDateTime.now());
-
-        return item;
-    }
-
-    // ================= SEARCH BY NATIONAL ID =================
-    @Transactional(readOnly = true)
-    public List<OrderResponse> getOrdersByNationalId(String nationalId) {
-
-        Long customerId;
-
-        try {
-
-            customerId = customerClient
-                    .getByNationalId(nationalId)
-                    .getId();
-
-        } catch (FeignException.NotFound e) {
-
-            throw new ResourceNotFoundException(
-                    "Customer not found with nationalId: " + nationalId
-            );
-
-        } catch (FeignException e) {
-
-            throw new ServiceUnavailableException(
-                    "Customer service is currently unavailable"
-            );
+                return buildOrderResponse(savedOrder);
         }
 
-        return orderRepo.findByCustomerId(customerId)
-                .stream()
-                .map(this::buildOrderResponse)
-                .toList();
-    }
+        @Transactional(readOnly = true)
+        public OrderResponse getOrderById(Long id) {
+
+                Order order = orderRepo.findById(id)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "Order not found with id: " + id));
+
+                return buildOrderResponse(order);
+        }
+
+        @Transactional(readOnly = true)
+        public List<OrderResponse> getOrdersByCustomer(Long customerId) {
+
+                return orderRepo.findByCustomerId(customerId)
+                                .stream()
+                                .map(this::buildOrderResponse)
+                                .toList();
+        }
+
+        public void cancelOrder(Long id) {
+
+                Order order = orderRepo.findById(id)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "Order not found with id: " + id));
+
+                OrderStatus canceled = getStatus("CANCELED");
+
+                order.setStatus(canceled);
+                order.setUpdatedAt(LocalDateTime.now());
+
+                order.getItems().forEach(item -> {
+                        item.setStatus(canceled);
+                        item.setUpdatedAt(LocalDateTime.now());
+                });
+        }
+
+        public void payOrder(Long orderId) {
+
+                Order order = orderRepo.findById(orderId)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "Order not found with id: " + orderId));
+
+                String status = order.getStatus().getStatusName();
+
+                if (!"SUBMITTED".equalsIgnoreCase(status)) {
+                        throw new InvalidOrderStatusTransitionException(
+                                        "Order cannot be paid in status: " + status);
+                }
+
+                boolean hasRefundedItem = order.getItems().stream()
+                                .anyMatch(i -> i.getStatus() != null &&
+                                                i.getStatus().getStatusName()
+                                                                .equalsIgnoreCase("REFUNDED"));
+
+                if (hasRefundedItem) {
+                        throw new InvalidOrderStatusTransitionException(
+                                        "Cannot pay order with refunded items");
+                }
+
+                OrderStatus paidStatus = getStatus("PAID");
+
+                order.setStatus(paidStatus);
+                order.setUpdatedAt(LocalDateTime.now());
+
+                order.getItems().forEach(item -> {
+                        if (item.getStatus().getStatusName()
+                                        .equalsIgnoreCase("SUBMITTED")) {
+
+                                item.setStatus(paidStatus);
+                                item.setUpdatedAt(LocalDateTime.now());
+                        }
+                });
+
+                orderRepo.save(order);
+        }
+
+        private OrderResponse buildOrderResponse(Order order) {
+
+                OrderResponse response = orderMapper.toOrderResponse(order);
+
+                response.setItems(
+                                order.getItems()
+                                                .stream()
+                                                .map(orderItemMapper::toResponse)
+                                                .toList());
+
+                return response;
+        }
+
+        private void recalcTotal(Order order) {
+
+                order.setTotalPrice(
+                                order.getItems()
+                                                .stream()
+                                                .map(OrderItem::getTotalPrice)
+                                                .reduce(BigDecimal.ZERO, BigDecimal::add));
+        }
+
+        private BigDecimal computePrice(ProductLookup product, boolean isMember) {
+
+                if (!isMember || product.getMemberDiscount() == null) {
+                        return product.getPrice();
+                }
+
+                return product.getPrice()
+                                .multiply(BigDecimal.ONE.subtract(product.getMemberDiscount()));
+        }
+
+        private OrderStatus getStatus(String status) {
+
+                return statusRepo.findByStatusNameIgnoreCase(status)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "OrderStatus not found: " + status));
+        }
+
+        private boolean fetchMembership(Long customerId) {
+
+                try {
+
+                        return customerClient
+                                        .getMembership(customerId)
+                                        .isMembership();
+
+                } catch (FeignException.NotFound e) {
+
+                        throw new ResourceNotFoundException(
+                                        "Customer not found with id: " + customerId);
+
+                } catch (FeignException e) {
+
+                        throw new ServiceUnavailableException(
+                                        "Customer service is currently unavailable");
+                }
+        }
+
+        private void validateOrderItems(List<CreateOrderItemRequest> items) {
+
+                if (items == null || items.isEmpty()) {
+                        throw new InvalidOrderItemsException(
+                                        "Order must contain at least one item");
+                }
+
+                Set<Long> purchaseProducts = new HashSet<>();
+                Set<String> oliveServices = new HashSet<>();
+
+                for (CreateOrderItemRequest item : items) {
+
+                        ProductLookup product = productRepo.findById(item.getProductId())
+                                        .orElseThrow(() -> new InvalidOrderItemsException(
+                                                        "Invalid productId"));
+
+                        if ("SERVICE".equals(product.getProductType())) {
+
+                                if (item.getOliveType() == null ||
+                                                item.getBagsCount() == null) {
+
+                                        throw new InvalidOrderItemsException(
+                                                        "Service requires oliveType & bagsCount");
+                                }
+
+                                String key = product.getId() + "|" + item.getOliveType();
+
+                                if (!oliveServices.add(key)) {
+
+                                        throw new InvalidOrderItemsException(
+                                                        "Duplicate service with same oliveType");
+                                }
+
+                        } else {
+
+                                if (!purchaseProducts.add(product.getId())) {
+
+                                        throw new InvalidOrderItemsException(
+                                                        "Duplicate purchase product");
+                                }
+                        }
+                }
+        }
+
+        private OrderItem buildItem(Order order,
+                        CreateOrderItemRequest dto,
+                        boolean isMember) {
+
+                ProductLookup product = productRepo.findById(dto.getProductId())
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "Product not found"));
+
+                OrderItem item = new OrderItem();
+
+                item.setOrder(order);
+                item.setProductId(product.getId());
+                item.setProductName(product.getProductName());
+                item.setProductType(product.getProductType());
+                item.setQuantity(dto.getQuantity());
+                item.setOliveType(dto.getOliveType());
+                item.setBagsCount(dto.getBagsCount());
+                item.setNote(dto.getNote());
+
+                BigDecimal price = computePrice(product, isMember);
+
+                item.setPrice(price);
+                item.setTotalPrice(price.multiply(dto.getQuantity()));
+                item.setStatus(getStatus("SUBMITTED"));
+                item.setCreatedAt(LocalDateTime.now());
+
+                return item;
+        }
+
+        @Transactional(readOnly = true)
+        public List<OrderResponse> getOrdersByNationalId(String nationalId) {
+
+                Long customerId;
+
+                try {
+
+                        customerId = customerClient
+                                        .getByNationalId(nationalId)
+                                        .getId();
+
+                } catch (FeignException.NotFound e) {
+
+                        throw new ResourceNotFoundException(
+                                        "Customer not found with nationalId: " + nationalId);
+
+                } catch (FeignException e) {
+
+                        throw new ServiceUnavailableException(
+                                        "Customer service is currently unavailable");
+                }
+
+                return orderRepo.findByCustomerId(customerId)
+                                .stream()
+                                .map(this::buildOrderResponse)
+                                .toList();
+        }
 }

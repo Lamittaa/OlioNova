@@ -17,11 +17,7 @@ public class PipelineTemplateSeeder implements ApplicationRunner {
 
     private final ProductionStageRepository stageRepository;
 
-    // =========================================================
-    // يشتغل مرة وحدة عند بدء التطبيق
-    // إذا Templates موجودة → يتجاهل
-    // إذا مش موجودة → يُنشئها
-    // =========================================================
+
     @Override
     public void run(ApplicationArguments args) {
 
@@ -62,7 +58,6 @@ public class PipelineTemplateSeeder implements ApplicationRunner {
                     .stageOrder(def.stageOrder())
                     .currentStatus(StageStatus.NOT_YET)
                     .isTemplate(true)
-                    // orderId + orderItemId = null عشان template
                     .build();
 
             stageRepository.save(template);
@@ -71,9 +66,7 @@ public class PipelineTemplateSeeder implements ApplicationRunner {
         log.info("Pipeline templates seeded successfully — {} templates created", definitions.size());
     }
 
-    // =========================================================
-    // Record بسيط لتعريف كل template
-    // =========================================================
+
     private record TemplateDefinition(
             String line,
             StageType stageType,

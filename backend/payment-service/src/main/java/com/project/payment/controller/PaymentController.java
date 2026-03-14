@@ -35,9 +35,7 @@ public class PaymentController {
     private final PaymentService paymentService;
     private final PaymentExcelExportService excelService;
 
-    // =========================================================
-    // 1️⃣ GET ALL PAYMENTS
-    // =========================================================
+
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','ACCOUNTANT')")
     public ResponseEntity<List<PaymentResponse>> getAllPayments() {
@@ -49,9 +47,6 @@ public class PaymentController {
         return ResponseEntity.ok(paymentService.getAllPayments());
     }
 
-    // =========================================================
-    // 2️⃣ CREATE PAYMENT
-    // =========================================================
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN','ACCOUNTANT')")
     public ResponseEntity<PaymentResponse> createPayment(
@@ -62,9 +57,7 @@ public class PaymentController {
                 .body(paymentService.createCashPayment(request));
     }
 
-    // =========================================================
-    // 3️⃣ GET PAYMENT BY ID
-    // =========================================================
+  
     @GetMapping("/{paymentId}")
     @PreAuthorize("hasAnyRole('ADMIN','ACCOUNTANT')")
     public ResponseEntity<PaymentResponse> getPaymentById(
@@ -75,9 +68,7 @@ public class PaymentController {
         );
     }
 
-    // =========================================================
-    // 4️⃣ GET PAYMENT BY ORDER ID
-    // =========================================================
+
     @GetMapping("/order/{orderId}")
     @PreAuthorize("hasAnyRole('ADMIN','ACCOUNTANT')")
     public ResponseEntity<PaymentResponse> getPaymentByOrderId(
@@ -88,9 +79,7 @@ public class PaymentController {
         );
     }
 
-    // =========================================================
-    // 📊 DAILY REPORT
-    // =========================================================
+
     @GetMapping("/daily")
     @PreAuthorize("hasAnyRole('ADMIN','ACCOUNTANT')")
     public ResponseEntity<DailyPaymentReportResponse> dailyReport(
@@ -104,9 +93,6 @@ public class PaymentController {
         );
     }
 
-    // =========================================================
-    // 📅 PERIOD REPORT
-    // =========================================================
     @GetMapping("/period")
     @PreAuthorize("hasAnyRole('ADMIN','ACCOUNTANT')")
     public ResponseEntity<PeriodPaymentReportResponse> periodReport(
@@ -125,9 +111,6 @@ public class PaymentController {
         );
     }
 
-    // =========================================================
-    // 📥 DAILY EXCEL EXPORT
-    // =========================================================
     @GetMapping("/reports/daily/excel")
     @PreAuthorize("hasAnyRole('ADMIN','ACCOUNTANT')")
     public ResponseEntity<byte[]> exportDailyExcel(
@@ -145,9 +128,7 @@ public class PaymentController {
                 .body(file);
     }
 
-    // =========================================================
-    // 📥 PERIOD EXCEL EXPORT
-    // =========================================================
+   
     @GetMapping("/reports/period/excel")
     @PreAuthorize("hasAnyRole('ADMIN','ACCOUNTANT')")
     public ResponseEntity<byte[]> exportPeriodExcel(

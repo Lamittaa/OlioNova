@@ -14,8 +14,7 @@ public class SmsService {
     public SmsService(
             @Value("${vonage.api-key}") String apiKey,
             @Value("${vonage.api-secret}") String apiSecret,
-            @Value("${vonage.from}") String from
-    ) {
+            @Value("${vonage.from}") String from) {
 
         this.client = VonageClient.builder()
                 .apiKey(apiKey)
@@ -30,8 +29,7 @@ public class SmsService {
         TextMessage sms = new TextMessage(
                 from,
                 phone,
-                message
-        );
+                message);
 
         client.getSmsClient().submitMessage(sms);
 

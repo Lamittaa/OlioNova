@@ -6,5 +6,5 @@ public record QueueResponseDto(
         List<ServingTicketDto> serving,
         List<WaitingTicketDto> waiting,
         QueueStatsDto stats,
-        String lastUpdated // ISO-8601 string
+        String lastUpdated 
 ) { }

@@ -4,13 +4,10 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(
-    name = "employee",
-    uniqueConstraints = {
+@Table(name = "employee", uniqueConstraints = {
         @UniqueConstraint(columnNames = "national_id"),
         @UniqueConstraint(columnNames = "email")
-    }
-)
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -47,10 +44,6 @@ public class Employee {
     private MaritalStatus martialStatus;
 
     @OneToOne(fetch = FetchType.LAZY, optional = false, cascade = CascadeType.ALL)
-    @JoinColumn(
-        name = "user_id",
-        nullable = false,
-        foreignKey = @ForeignKey(name = "fk_employee_user")
-    )
+    @JoinColumn(name = "user_id", nullable = false, foreignKey = @ForeignKey(name = "fk_employee_user"))
     private User user;
 }

@@ -14,7 +14,6 @@ import com.project.order.repository.OrderStatusRepo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -23,92 +22,80 @@ import java.util.List;
 @Transactional
 public class OrderStatusService {
 
-    private final OrderStatusRepo statusRepo;
-    private final OrderStatusMapper statusMapper;
-    private final OrderRepo orderRepo;
-    private final OrderMapper orderMapper;
+        private final OrderStatusRepo statusRepo;
+        private final OrderStatusMapper statusMapper;
+        private final OrderRepo orderRepo;
+        private final OrderMapper orderMapper;
 
-    @Transactional(readOnly = true)
-    public OrderStatusResponse getStatusById(Long id) {
+        @Transactional(readOnly = true)
+        public OrderStatusResponse getStatusById(Long id) {
 
-        OrderStatus status = statusRepo.findById(id)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Order status not found with id: " + id));
+                OrderStatus status = statusRepo.findById(id)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "Order status not found with id: " + id));
 
-        return statusMapper.toOrderStatusResponse(status);
-    }
-
-    @Transactional(readOnly = true)
-    public List<OrderStatusResponse> getAllStatuses() {
-
-        return statusRepo.findAll()
-                .stream()
-                .map(statusMapper::toOrderStatusResponse)
-                .toList();
-    }
-
-    private OrderStatus getStatusOrThrow(String statusName) {
-
-        return statusRepo.findByStatusNameIgnoreCase(statusName)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "OrderStatus not found: " + statusName));
-    }
-
-    // =====================================================
-    // UPDATE ORDER STATUS
-    // =====================================================
-    public OrderResponse updateStatus(Long orderId, UpdateOrderStatusRequest request) {
-
-        Order order = orderRepo.findById(orderId)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Order not found with id: " + orderId));
-
-        String currentStatus = order.getStatus().getStatusName();
-
-        OrderStatus newStatus = getStatusOrThrow(request.getStatus());
-        String nextStatus = newStatus.getStatusName();
-
-        validateStatusTransition(currentStatus, nextStatus);
-
-        order.setStatus(newStatus);
-        order.setUpdatedAt(LocalDateTime.now());
-
-        return orderMapper.toOrderResponse(orderRepo.save(order));
-    }
-
-    // =====================================================
-    // STATUS TRANSITION VALIDATION
-    // =====================================================
-    private void validateStatusTransition(String current, String next) {
-
-        current = current.trim().toUpperCase();
-        next = next.trim().toUpperCase();
-
-        // ================= SUBMITTED =================
-        if (current.equals("SUBMITTED") &&
-                (next.equals("PAID") || next.equals("CANCELED"))) {
-            return;
+                return statusMapper.toOrderStatusResponse(status);
         }
 
-        // ================= PAID =================
-        if (current.equals("PAID") &&
-                (next.equals("READY_FOR_PICKUP") ||
-                        next.equals("COMPLETED") ||
-                        next.equals("REFUNDED"))) {
-            return;
+        @Transactional(readOnly = true)
+        public List<OrderStatusResponse> getAllStatuses() {
+
+                return statusRepo.findAll()
+                                .stream()
+                                .map(statusMapper::toOrderStatusResponse)
+                                .toList();
         }
 
-        // ================= READY_FOR_PICKUP =================
-        if (current.equals("READY_FOR_PICKUP") &&
-                next.equals("COMPLETED")) {
-            return;
+        private OrderStatus getStatusOrThrow(String statusName) {
+
+                return statusRepo.findByStatusNameIgnoreCase(statusName)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "OrderStatus not found: " + statusName));
         }
 
-        throw new InvalidOrderStatusTransitionException(
-                "Invalid order status transition: "
-                        + current + " → " + next);
-    }
+        public OrderResponse updateStatus(Long orderId, UpdateOrderStatusRequest request) {
+
+                Order order = orderRepo.findById(orderId)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "Order not found with id: " + orderId));
+
+                String currentStatus = order.getStatus().getStatusName();
+
+                OrderStatus newStatus = getStatusOrThrow(request.getStatus());
+                String nextStatus = newStatus.getStatusName();
+
+                validateStatusTransition(currentStatus, nextStatus);
+
+                order.setStatus(newStatus);
+                order.setUpdatedAt(LocalDateTime.now());
+
+                return orderMapper.toOrderResponse(orderRepo.save(order));
+        }
+
+        private void validateStatusTransition(String current, String next) {
+
+                current = current.trim().toUpperCase();
+                next = next.trim().toUpperCase();
+
+                if (current.equals("SUBMITTED") &&
+                                (next.equals("PAID") || next.equals("CANCELED"))) {
+                        return;
+                }
+
+                if (current.equals("PAID") &&
+                                (next.equals("READY_FOR_PICKUP") ||
+                                                next.equals("COMPLETED") ||
+                                                next.equals("REFUNDED"))) {
+                        return;
+                }
+
+                if (current.equals("READY_FOR_PICKUP") &&
+                                next.equals("COMPLETED")) {
+                        return;
+                }
+
+                throw new InvalidOrderStatusTransitionException(
+                                "Invalid order status transition: "
+                                                + current + " → " + next);
+        }
 }

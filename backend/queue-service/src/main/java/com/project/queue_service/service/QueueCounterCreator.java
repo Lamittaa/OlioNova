@@ -20,7 +20,7 @@ class QueueCounterCreator {
     public QueueCounter createCounterRow(QueueType queueType, LocalDate day) {
 
         QueueCounter counter = new QueueCounter();
-        counter.setQueueType(queueType);   // ✅ Enum
+        counter.setQueueType(queueType);   
         counter.setQueueDate(day);
         counter.setNextTicketNumber(1);
 

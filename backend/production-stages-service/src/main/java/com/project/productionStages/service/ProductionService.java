@@ -16,107 +16,83 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ProductionService {
 
-    private final ProductionStageRepository stageRepository;
-    private final LineSelectionService lineSelectionService;
+        private final ProductionStageRepository stageRepository;
+        private final LineSelectionService lineSelectionService;
 
-    // =========================================================
-    // 1 START PRODUCTION
-    // =========================================================
-    public void startProduction(StartProductionRequest request) {
+        public void startProduction(StartProductionRequest request) {
 
-        // check if production already started
-        if (!stageRepository.findByOrderItemId(request.getOrderItemId()).isEmpty()) {
-            throw new BusinessRuleException(
-                    "Production already started for order item: "
-                            + request.getOrderItemId()
-            );
+                if (!stageRepository.findByOrderItemId(request.getOrderItemId()).isEmpty()) {
+                        throw new BusinessRuleException(
+                                        "Production already started for order item: "
+                                                        + request.getOrderItemId());
+                }
+
+                String line = lineSelectionService.chooseBestLine();
+
+                List<ProductionStage> templates = stageRepository.findByLineAndIsTemplateOrderByStageOrderAsc(
+                                line,
+                                true);
+
+                if (templates.isEmpty()) {
+                        throw new BusinessRuleException(
+                                        "No pipeline templates found for line: " + line);
+                }
+
+                for (ProductionStage template : templates) {
+
+                        ProductionStage orderStage = ProductionStage.builder()
+                                        .name(template.getName())
+                                        .stageType(template.getStageType())
+                                        .orderId(request.getOrderId())
+                                        .orderItemId(request.getOrderItemId())
+                                        .line(line)
+                                        .stageOrder(template.getStageOrder())
+                                        .currentStatus(StageStatus.NOT_YET)
+                                        .isTemplate(false)
+                                        .build();
+
+                        stageRepository.save(orderStage);
+                }
         }
 
-        String line = lineSelectionService.chooseBestLine();
+        public List<ProductionStageResponse> getStagesByOrder(Long orderItemId) {
 
-        List<ProductionStage> templates =
-                stageRepository.findByLineAndIsTemplateOrderByStageOrderAsc(
-                        line,
-                        true
-                );
-
-        if (templates.isEmpty()) {
-            throw new BusinessRuleException(
-                    "No pipeline templates found for line: " + line
-            );
+                return stageRepository.findByOrderItemId(orderItemId)
+                                .stream()
+                                .map(this::mapToResponse)
+                                .toList();
         }
 
-        for (ProductionStage template : templates) {
+        public List<ProductionStageResponse> getPipelineStatus() {
 
-            ProductionStage orderStage = ProductionStage.builder()
-                    .name(template.getName())
-                    .stageType(template.getStageType())
-                    .orderId(request.getOrderId())
-                    .orderItemId(request.getOrderItemId())
-                    .line(line)
-                    .stageOrder(template.getStageOrder())
-                    .currentStatus(StageStatus.NOT_YET)
-                    .isTemplate(false)
-                    .build();
-
-            stageRepository.save(orderStage);
+                return stageRepository.findByCurrentStatusAndIsTemplate(
+                                StageStatus.IN_PROGRESS,
+                                false)
+                                .stream()
+                                .map(this::mapToResponse)
+                                .toList();
         }
-    }
 
-    // =========================================================
-    // 2 GET STAGES OF ORDER
-    // =========================================================
-    public List<ProductionStageResponse> getStagesByOrder(Long orderItemId) {
+        public ProductionStageResponse getStageById(Long id) {
 
-        return stageRepository.findByOrderItemId(orderItemId)
-                .stream()
-                .map(this::mapToResponse)
-                .toList();
-    }
+                ProductionStage stage = stageRepository.findById(id)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "Stage not found with id: " + id));
 
-    // =========================================================
-    // 3 GET PIPELINE STATUS
-    // =========================================================
-    public List<ProductionStageResponse> getPipelineStatus() {
+                return mapToResponse(stage);
+        }
 
-        return stageRepository.findByCurrentStatusAndIsTemplate(
-                        StageStatus.IN_PROGRESS,
-                        false
-                )
-                .stream()
-                .map(this::mapToResponse)
-                .toList();
-    }
+        private ProductionStageResponse mapToResponse(ProductionStage stage) {
 
-    // =========================================================
-    // 4 GET STAGE BY ID
-    // =========================================================
-    public ProductionStageResponse getStageById(Long id) {
-
-        ProductionStage stage = stageRepository.findById(id)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Stage not found with id: " + id
-                        )
-                );
-
-        return mapToResponse(stage);
-    }
-
-    // =========================================================
-    // MAPPER
-    // =========================================================
-    private ProductionStageResponse mapToResponse(ProductionStage stage) {
-
-        return ProductionStageResponse.builder()
-                .id(stage.getId())
-                .name(stage.getName())
-                .stageType(stage.getStageType())
-                .orderId(stage.getOrderId())
-                .orderItemId(stage.getOrderItemId())
-                .line(stage.getLine())
-                .stageOrder(stage.getStageOrder())
-                .currentStatus(stage.getCurrentStatus())
-                .build();
-    }
+                return ProductionStageResponse.builder()
+                                .id(stage.getId())
+                                .name(stage.getName())
+                                .stageType(stage.getStageType())
+                                .orderId(stage.getOrderId())
+                                .orderItemId(stage.getOrderItemId())
+                                .line(stage.getLine())
+                                .stageOrder(stage.getStageOrder())
+                                .currentStatus(stage.getCurrentStatus())
+                                .build();
+        }
 }

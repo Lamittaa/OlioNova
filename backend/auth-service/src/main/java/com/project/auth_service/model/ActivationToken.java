@@ -1,3 +1,4 @@
+
 package com.project.auth_service.model;
 
 import jakarta.persistence.*;
@@ -6,8 +7,11 @@ import lombok.*;
 import java.time.Instant;
 
 @Entity
-@Getter @Setter
-@NoArgsConstructor @AllArgsConstructor @Builder
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 @Table(name = "activation_token", uniqueConstraints = {
         @UniqueConstraint(columnNames = "token")
 })

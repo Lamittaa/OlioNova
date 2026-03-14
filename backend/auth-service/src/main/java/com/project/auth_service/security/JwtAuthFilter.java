@@ -32,23 +32,24 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        // استثناء المسارات العامة + preflight
+
         String path = request.getServletPath();
-        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) return true;
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod()))
+            return true;
 
         return path.startsWith("/api/auth/login")
-            || path.startsWith("/api/auth/register")
-            || path.startsWith("/api/auth/refresh")    // refresh لا يحتاج Access
-            || path.startsWith("/v3/api-docs")
-            || path.startsWith("/swagger-ui")
-            || path.equals("/swagger-ui.html")
-            || path.startsWith("/actuator/health");
+                || path.startsWith("/api/auth/register")
+                || path.startsWith("/api/auth/refresh")
+                || path.startsWith("/v3/api-docs")
+                || path.startsWith("/swagger-ui")
+                || path.equals("/swagger-ui.html")
+                || path.startsWith("/actuator/health");
     }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain chain) throws ServletException, IOException {
+            HttpServletResponse response,
+            FilterChain chain) throws ServletException, IOException {
 
         String auth = request.getHeader("Authorization");
 
@@ -61,9 +62,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                     UserDetails user = uds.loadUserByUsername(username);
 
-                    // نتحقق أنه Access Token (صالح وغير منتهي)
                     if (jwt.isAccessTokenValid(token, user)) {
-                        // نقرأ الأدوار من الـ access؛ ولو مفقودة ن fallback لأدوار الـ user
+
                         List<String> roles = jwt.extractRoles(token);
                         if (roles == null || roles.isEmpty()) {
                             roles = user.getAuthorities().stream()
@@ -75,19 +75,15 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                                 .collect(Collectors.toList());
 
                         var authToken = new UsernamePasswordAuthenticationToken(
-                                user, null, authorities
-                        );
+                                user, null, authorities);
                         authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                         SecurityContextHolder.getContext().setAuthentication(authToken);
                     }
                 }
             } catch (ExpiredJwtException ex) {
-                // access منتهي: نمرّر الطلب بدون مصادقة (العميل يجدد عبر /auth/refresh)
-                // ممكن تضيف header توضيحي:
                 response.setHeader("X-Token-Expired", "true");
             } catch (JwtException | IllegalArgumentException ex) {
-                // توكن غير صالح — لا نرمي 500
-                // ممكن logging فقط
+
             }
         }
 

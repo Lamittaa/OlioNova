@@ -15,9 +15,7 @@ import java.util.stream.Collectors;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    // ============================================
-    // 1️⃣ No Waiting Ticket
-    // ============================================
+  
     @ExceptionHandler(NoWaitingTicketException.class)
     public ResponseEntity<ErrorResponse> handleNoWaiting(
             NoWaitingTicketException ex,
@@ -33,9 +31,7 @@ public class GlobalExceptionHandler {
         );
     }
 
-    // ============================================
-    // 2️⃣ Illegal Argument
-    // ============================================
+ 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleIllegalArgument(
             IllegalArgumentException ex,
@@ -51,9 +47,7 @@ public class GlobalExceptionHandler {
         );
     }
 
-    // ============================================
-    // 3️⃣ Validation Errors
-    // ============================================
+  
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidation(
             MethodArgumentNotValidException ex,
@@ -80,9 +74,7 @@ public class GlobalExceptionHandler {
         );
     }
 
-    // ============================================
-    // 4️⃣ Database Conflict
-    // ============================================
+  
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponse> handleDatabase(
             DataIntegrityViolationException ex,
@@ -98,9 +90,7 @@ public class GlobalExceptionHandler {
         );
     }
 
-    // ============================================
-    // 5️⃣ Generic Exception
-    // ============================================
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneric(
             Exception ex,
@@ -170,9 +160,7 @@ public ResponseEntity<ErrorResponse> handleInvalidState(
     );
 }
 
-// ============================================
-// 6️⃣ Duplicate Ticket
-// ============================================
+
 @ExceptionHandler(DuplicateTicketException.class)
 public ResponseEntity<ErrorResponse> handleDuplicateTicket(
         DuplicateTicketException ex,
@@ -202,9 +190,7 @@ public ResponseEntity<ErrorResponse> handleServiceUnavailable(
             null
     );
 }
-    // ============================================
-    // Helper
-    // ============================================
+
     private ResponseEntity<ErrorResponse> buildError(
             HttpStatus status,
             HttpServletRequest request,

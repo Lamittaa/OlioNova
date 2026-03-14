@@ -23,13 +23,11 @@ public class AuthorityService {
     private final AuthorityRepository authorityRepository;
     private final AuthorityMapper authorityMapper;
 
-    // ✅ Create
     public AuthorityDto addAuthority(AddAuthorityDto dto) {
 
         if (authorityRepository.existsByName(dto.getName())) {
             throw new DataIntegrityViolationException(
-                    "Authority already exists: " + dto.getName()
-            );
+                    "Authority already exists: " + dto.getName());
         }
 
         Authority authority = authorityMapper.toEntity(dto);
@@ -38,7 +36,6 @@ public class AuthorityService {
         return authorityMapper.toDto(saved);
     }
 
-    // ✅ Read all
     @Transactional(readOnly = true)
     public List<AuthorityDto> getAllAuthorities() {
 
@@ -48,47 +45,34 @@ public class AuthorityService {
                 .toList();
     }
 
-    // ✅ Read by ID
-
     @Transactional(readOnly = true)
     public AuthorityDto getAuthorityById(Long id) {
 
         Authority authority = authorityRepository.findById(id)
-                .orElseThrow(() ->
-                        new EntityNotFoundException("Authority not found with id: " + id)
-                );
+                .orElseThrow(() -> new EntityNotFoundException("Authority not found with id: " + id));
 
         return authorityMapper.toDto(authority);
     }
 
-    // ✅ Update
-
     public AuthorityDto updateAuthority(Long id, UpdateAuthorityDto dto) {
 
         Authority authority = authorityRepository.findById(id)
-                .orElseThrow(() ->
-                        new EntityNotFoundException("Authority not found with id: " + id)
-                );
+                .orElseThrow(() -> new EntityNotFoundException("Authority not found with id: " + id));
 
         if (!authority.getName().equals(dto.getName())
-            && authorityRepository.existsByName(dto.getName())) {
+                && authorityRepository.existsByName(dto.getName())) {
             throw new DataIntegrityViolationException(
-                    "Authority already exists: " + dto.getName()
-            );
+                    "Authority already exists: " + dto.getName());
         }
 
         authority.setName(dto.getName());
         return authorityMapper.toDto(authority);
     }
 
-    // ✅ Delete
-
     public void deleteAuthority(Long id) {
 
         Authority authority = authorityRepository.findById(id)
-                .orElseThrow(() ->
-                        new EntityNotFoundException("Authority not found with id: " + id)
-                );
+                .orElseThrow(() -> new EntityNotFoundException("Authority not found with id: " + id));
 
         boolean authorityInUse = !authority.getRoles().isEmpty();
         if (authorityInUse) {

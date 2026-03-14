@@ -25,7 +25,7 @@ public class ProductionDashboardService {
 
         for (String line : lines) {
 
-            // ✅ order stages فقط (isTemplate=false) — لا templates
+           
             Optional<ProductionStage> currentOpt =
                     stageRepository.findByLineAndCurrentStatusAndIsTemplate(
                             line,
@@ -47,7 +47,6 @@ public class ProductionDashboardService {
 
             ProductionStageLogging log = logOpt.get();
 
-            // ✅ عدد الطلبات المنتظرة (order stages فقط)
             long queue = stageRepository.countByLineAndCurrentStatusAndIsTemplate(
                     line,
                     StageStatus.NOT_YET,

@@ -19,9 +19,7 @@ public class UpdateEmployeeProfileRequest {
         message = "Invalid phone number"
     )
     private String phoneNumber;
-
     @Email(message = "Invalid email format")
     private String email;
-
     private MaritalStatus maritalStatus;
 }

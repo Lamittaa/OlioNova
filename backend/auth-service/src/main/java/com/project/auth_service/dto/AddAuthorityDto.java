@@ -9,5 +9,5 @@ import lombok.Setter;
 public class AddAuthorityDto {
 
     @NotBlank(message = "Authority name must not be blank")
-    private String name; // ADD_USER, DELETE_USER, ...
+    private String name;
 }

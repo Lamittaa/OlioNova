@@ -27,7 +27,6 @@ public class CityService {
     private final CityRepo cityRepo;
     private final CityMapper cityMapper;
 
-
     public CreateCityResponse createCity(CreateCityRequest request) {
 
         String name = request.getCityName().trim();
@@ -43,7 +42,6 @@ public class CityService {
         return cityMapper.toCreateCityResponse(saved);
     }
 
-
     @Transactional(readOnly = true)
     public CityResponse getCityById(Long id) {
         CityLookup city = cityRepo.findById(id)
@@ -52,7 +50,6 @@ public class CityService {
         return cityMapper.toCityResponse(city);
     }
 
-
     @Transactional(readOnly = true)
     public List<CityResponse> getAllCities() {
         return cityRepo.findAll()
@@ -60,7 +57,6 @@ public class CityService {
                 .map(cityMapper::toCityResponse)
                 .toList();
     }
-
 
     public CityResponse updateCity(Long id, UpdateCityRequest request) {
         CityLookup city = cityRepo.findById(id)
@@ -71,7 +67,6 @@ public class CityService {
         CityLookup saved = cityRepo.save(city);
         return cityMapper.toCityResponse(saved);
     }
-
 
     public void deleteCity(Long id) {
         CityLookup city = cityRepo.findById(id)

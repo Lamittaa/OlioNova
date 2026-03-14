@@ -9,18 +9,11 @@ import lombok.Data;
 public class ProductionStageResponse {
 
     private Long id;
-
     private String name;
-
     private StageType stageType;
-
     private Long orderId;
-
     private Long orderItemId;
-
     private String line;
-
     private Integer stageOrder;
-
     private StageStatus currentStatus;
 }

@@ -29,57 +29,44 @@ public class SecurityConfig {
 
     private final SecurityErrorHandler securityErrorHandler;
 
- @Bean
-SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    @Bean
+    SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
-    http
-        .csrf(csrf -> csrf.disable())
+        http
+                .csrf(csrf -> csrf.disable())
 
-        // ✅ هذا اللي يخلي Swagger يفتح طبيعي
-        .formLogin(form -> form.disable())
-        .httpBasic(basic -> basic.disable())
+                .formLogin(form -> form.disable())
+                .httpBasic(basic -> basic.disable())
 
-        .sessionManagement(sm ->
-            sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-        )
+                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-        .authorizeHttpRequests(auth -> auth
-            // Swagger public
-            .requestMatchers(
-                "/swagger-ui/**",
-                "/swagger-ui.html",
-                "/v3/api-docs/**"
-            ).permitAll()
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(
+                                "/swagger-ui/**",
+                                "/swagger-ui.html",
+                                "/v3/api-docs/**")
+                        .permitAll()
 
-            // health
-            .requestMatchers("/actuator/health").permitAll()
+                        .requestMatchers("/actuator/health").permitAll()
 
-            // باقي الطلبات JWT
-            .anyRequest().authenticated()
-        )
+                        .anyRequest().authenticated())
 
-        // JSON errors
-        .exceptionHandling(eh -> eh
-            .authenticationEntryPoint(securityErrorHandler)
-            .accessDeniedHandler(securityErrorHandler)
-        )
+                .exceptionHandling(eh -> eh
+                        .authenticationEntryPoint(securityErrorHandler)
+                        .accessDeniedHandler(securityErrorHandler))
 
-        .oauth2ResourceServer(oauth2 -> oauth2
-            .authenticationEntryPoint(securityErrorHandler)
-            .accessDeniedHandler(securityErrorHandler)
-            .jwt(jwt -> jwt
-                .decoder(jwtDecoder())
-                .jwtAuthenticationConverter(jwtAuthenticationConverter())
-            )
-        );
+                .oauth2ResourceServer(oauth2 -> oauth2
+                        .authenticationEntryPoint(securityErrorHandler)
+                        .accessDeniedHandler(securityErrorHandler)
+                        .jwt(jwt -> jwt
+                                .decoder(jwtDecoder())
+                                .jwtAuthenticationConverter(jwtAuthenticationConverter())));
 
-    return http.build();
-}
-
+        return http.build();
+    }
 
     @Bean
     public JwtDecoder jwtDecoder() {
-        // HS256
         var key = new SecretKeySpec(jwtSecret.getBytes(), "HmacSHA256");
         return NimbusJwtDecoder.withSecretKey(key).build();
     }
@@ -88,11 +75,8 @@ SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
     public JwtAuthenticationConverter jwtAuthenticationConverter() {
         var authoritiesConverter = new JwtGrantedAuthoritiesConverter();
 
-        // لازم يطابق اسم الـ claim داخل الـ JWT
         authoritiesConverter.setAuthoritiesClaimName("authorities");
 
-        // إذا عندك authorities مثل ROLE_ADMIN و PRODUCT_CREATE ... خليها ""
-        // (يعني ما يضيف ROLE_ زيادة)
         authoritiesConverter.setAuthorityPrefix("");
 
         var jwtConverter = new JwtAuthenticationConverter();

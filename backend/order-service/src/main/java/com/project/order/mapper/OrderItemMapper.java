@@ -22,7 +22,6 @@ public class OrderItemMapper {
             return dto;
         }
 
-        // PURCHASE
         PurchaseItemResponse dto = new PurchaseItemResponse();
         mapBase(item, dto);
 
@@ -38,7 +37,6 @@ public class OrderItemMapper {
     dto.setPrice(item.getPrice());
     dto.setTotalPrice(item.getTotalPrice());
 
-    // 🔥 الجديد
     dto.setStatus(
             item.getStatus() != null
                     ? item.getStatus().getStatusName()

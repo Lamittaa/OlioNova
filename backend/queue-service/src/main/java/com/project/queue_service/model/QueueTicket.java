@@ -21,23 +21,18 @@ public class QueueTicket {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
     @Column(name = "order_id")
-    private Long orderId; // used only for PRODUCTION queue
+    private Long orderId; 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private QueueType queueType;
-
     @Column(nullable = false)
     private LocalDate queueDate;
-
     @Column(nullable = false)
     private Integer ticketNumber;
     private TicketStatus ticketStatus;
     private Long userId;
-
     private LocalDateTime createdAt;
-
     private LocalDateTime calledAt;
-
     private LocalDateTime completedAt;
 
 }

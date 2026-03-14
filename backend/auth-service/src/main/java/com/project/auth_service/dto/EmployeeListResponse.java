@@ -12,7 +12,6 @@ public class EmployeeListResponse {
     private String nationalId;
     private String email;
     private String phoneNumber;
-
     private String username;
     private String role;
     private boolean enabled;

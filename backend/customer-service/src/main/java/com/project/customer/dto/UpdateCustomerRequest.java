@@ -1,7 +1,6 @@
 package com.project.customer.dto;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
+
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
@@ -30,9 +29,6 @@ public class UpdateCustomerRequest {
         message = "Phone number must be a valid Palestinian mobile number"
     )
     private String phoneNumber;
-
-
     private Long cityId;
-
     private Boolean isMember;
 }

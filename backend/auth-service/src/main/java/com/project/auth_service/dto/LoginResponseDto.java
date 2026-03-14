@@ -10,9 +10,9 @@ import lombok.Data;
 public class LoginResponseDto {
     private String accessToken;
     private String refreshToken;
-    private String tokenType;     // "Bearer"
+    private String tokenType;     
     private long   expiresIn;
-    private long refreshExpiresIn;     // seconds for access token
-    private String username;      // اسم المستخدم الحالي
-    private String role;          // دوره في النظام
+    private long refreshExpiresIn;     
+    private String username;      
+    private String role;          
 }

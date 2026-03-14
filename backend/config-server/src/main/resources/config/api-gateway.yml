@@ -12,49 +12,44 @@ spring:
             allowedMethods: [GET, POST, PUT, PATCH, DELETE, OPTIONS]
 
       routes:
-        # AUTH-SERVICE
+     
         - id: auth-api
           uri: lb://AUTH-SERVICE
           predicates:
             - Path=/api/auth/**,/api/users/**,/api/roles/**,/api/employees/**,/api/authorities/**,/api/set-password
 
-        # CUSTOMER-SERVICE
+       
         - id: customer-api
           uri: lb://CUSTOMER-SERVICE
           predicates:
             - Path=/api/customers/**,/api/cities/**
 
-        # ORDER-SERVICE
+    
         - id: order-api
           uri: lb://ORDER-SERVICE
           predicates:
             - Path=/api/orders/**,/api/products/**,/api/order-statuses/**
 
-        # PAYMENT-SERVICE
         - id: payment-api
           uri: lb://PAYMENT-SERVICE
           predicates:
             - Path=/api/payments/**,/api/payment-reports/**
 
-        # PRODUCTIONSTAGES-SERVICE
         - id: productionStages-api
           uri: lb://PRODUCTIONSTAGES-SERVICE
           predicates:
             - Path=/api/production-stages/**,/api/stage-types/**
 
-        # QUEUE-SERVICE
         - id: queue-api
           uri: lb://QUEUE-SERVICE
           predicates:
             - Path=/api/queue/**,/api/queues/**
 
-        # QUEUE WEBSOCKET
         - id: queue-websocket
           uri: lb:ws://QUEUE-SERVICE
           predicates:
             - Path=/ws/**
 
-        # TRACKING-SERVICE
         - id: tracking-api
           uri: lb://TRACKING-SERVICE
           predicates:
