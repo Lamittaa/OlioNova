@@ -1,6 +1,7 @@
 package com.project.order.service;
 
 import com.project.order.client.CustomerClient;
+import com.project.order.client.NotificationClient;
 import com.project.order.dto.CreateOrderItemRequest;
 import com.project.order.dto.CreateOrderRequest;
 import com.project.order.dto.OrderResponse;
@@ -38,7 +39,7 @@ public class OrderService {
     private final CustomerClient customerClient;
     private final OrderMapper orderMapper;
     private final OrderItemMapper orderItemMapper;
-
+private final NotificationClient notificationClient;
     // ================= CREATE =================
     public OrderResponse createOrder(CreateOrderRequest request) {
 
@@ -58,7 +59,15 @@ public class OrderService {
 
         recalcTotal(order);
 
-        return buildOrderResponse(orderRepo.save(order));
+        Order savedOrder = orderRepo.save(order);
+
+// هنا نرسل SMS
+notificationClient.sendSms(
+        "+972585800246",
+        "Your olive order has been submitted successfully."
+);
+
+return buildOrderResponse(savedOrder);
     }
 
     // ================= READ =================
