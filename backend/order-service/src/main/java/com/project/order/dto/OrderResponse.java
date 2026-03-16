@@ -3,7 +3,6 @@ package com.project.order.dto;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -15,7 +14,7 @@ public class OrderResponse {
     private Long customerId;
     private String status;
     private List<OrderItemResponse> items;
-    private BigDecimal totalPrice;
+    private boolean isMember;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

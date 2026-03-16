@@ -10,10 +10,11 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 public class PaymentResponse {
-    private Long id;
-    private Long orderId;
-    private BigDecimal totalPrice;
-    private PaymentType paymentType;
+
+    private Long          id;
+    private Long          orderId;
+    private BigDecimal    totalPrice;
+    private PaymentType   paymentType;
     private LocalDateTime paymentDate;
-    private Long userId;
+    private Long          userId;
 }

@@ -307,6 +307,18 @@ public ResponseEntity<ErrorResponse> handleInvalidStatusTransition(
                     .path(request.getRequestURI())
                     .build());
 }
+@ExceptionHandler(OutOfStockException.class)
+public ResponseEntity<ErrorResponse> handleOutOfStock(
+        OutOfStockException ex,
+        HttpServletRequest req) {
+
+    return build(
+            HttpStatus.CONFLICT,
+            ex.getMessage(),
+            req,
+            "OUT_OF_STOCK",
+            null);
+}
 @ExceptionHandler(BusinessRuleViolationException.class)
 public ResponseEntity<ErrorResponse> handleBusinessRuleViolation(
         BusinessRuleViolationException ex,

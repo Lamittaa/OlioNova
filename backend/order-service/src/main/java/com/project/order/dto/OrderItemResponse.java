@@ -14,7 +14,5 @@ public abstract class OrderItemResponse {
     private String productName;
     private String productType;
     private BigDecimal quantity;
-    private BigDecimal price;
-    private BigDecimal totalPrice;
     private String status;   
 }

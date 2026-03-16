@@ -93,4 +93,10 @@ public class EmployeeController {
                 req.getOldPassword(),
                 req.getNewPassword());
     }
+
+    @GetMapping("/internal/{id}")
+public EmployeeResponse getEmployeeInternal(@PathVariable Long id) {
+    return employeeMapper.toResponse(
+            employeeService.getEmployeeById(id));
+}
 }

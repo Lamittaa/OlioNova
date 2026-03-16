@@ -209,7 +209,20 @@ private ResponseEntity<ErrorResponse> buildError(
 
     return new ResponseEntity<>(body, status);
 }
+@ExceptionHandler(OrderNotEditableException.class)
+public ResponseEntity<ErrorResponse> handleOrderNotEditableException(
+        OrderNotEditableException ex,
+        HttpServletRequest request
+) {
 
+    return buildError(
+            HttpStatus.CONFLICT,
+            request,
+            "ORDER_NOT_EDITABLE",
+            ex.getMessage(),
+            null
+    );
+}
 
     // ---------- Helpers ----------
     private ResponseEntity<ErrorResponse> build(HttpStatus status, String msg, HttpServletRequest req,

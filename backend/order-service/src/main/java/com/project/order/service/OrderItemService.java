@@ -5,9 +5,7 @@ import com.project.order.dto.AddOrderItemRequest;
 import com.project.order.dto.OrderItemResponse;
 import com.project.order.dto.OrderResponse;
 import com.project.order.dto.UpdateOrderItemRequest;
-import com.project.order.exception.BusinessRuleViolationException;
-import com.project.order.exception.OrderNotEditableException;
-import com.project.order.exception.ResourceNotFoundException;
+import com.project.order.exception.*;
 import com.project.order.mapper.OrderItemMapper;
 import com.project.order.mapper.OrderMapper;
 import com.project.order.model.Order;
@@ -32,379 +30,450 @@ import java.util.List;
 @Transactional
 public class OrderItemService {
 
-        private final OrderRepo orderRepo;
-        private final OrderItemRepo itemRepo;
-        private final ProductLookupRepo productRepo;
-        private final CustomerClient customerClient;
-        private final OrderStatusRepo statusRepo;
-        private final OrderItemMapper orderItemMapper;
-        private final OrderMapper orderMapper;
+    private final OrderRepo         orderRepo;
+    private final OrderItemRepo     itemRepo;
+    private final ProductLookupRepo productRepo;
+    private final CustomerClient    customerClient;
+    private final OrderStatusRepo   statusRepo;
+    private final OrderItemMapper   orderItemMapper;
+    private final OrderMapper       orderMapper;
 
-        @Transactional(readOnly = true)
-        public List<OrderItemResponse> getItems(Long orderId) {
+    // =====================================================
+    // GET ALL ITEMS
+    // =====================================================
+    @Transactional(readOnly = true)
+    public List<OrderItemResponse> getItems(Long orderId) {
 
-                ensureOrderExists(orderId);
+        ensureOrderExists(orderId);
 
-                return itemRepo.findByOrderId(orderId)
-                                .stream()
-                                .map(orderItemMapper::toResponse)
-                                .toList();
+        return itemRepo.findByOrderId(orderId)
+                .stream()
+                .map(orderItemMapper::toResponse)
+                .toList();
+    }
+
+    // =====================================================
+    // GET SINGLE ITEM
+    // =====================================================
+    @Transactional(readOnly = true)
+    public OrderItemResponse getItem(Long orderId, Long itemId) {
+
+        OrderItem item = itemRepo.findByIdAndOrderId(itemId, orderId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Order item not found. orderId="
+                        + orderId + ", itemId=" + itemId));
+
+        return orderItemMapper.toResponse(item);
+    }
+
+    // =====================================================
+    // ADD ITEM
+    // =====================================================
+    public OrderResponse addItem(Long orderId,
+                                  AddOrderItemRequest request) {
+
+        Order order = orderRepo.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Order not found with id: " + orderId));
+
+        ensureOrderEditable(order);
+
+        ProductLookup product =
+                productRepo.findById(request.getProductId())
+                        .orElseThrow(() -> new ResourceNotFoundException(
+                                "Product not found with id: "
+                                + request.getProductId()));
+
+        validateAddItemRules(order, product, request);
+
+        boolean isMember = customerClient
+                .getMembership(order.getCustomerId())
+                .isMembership();
+
+        OrderItem item = new OrderItem();
+        item.setOrder(order);
+        item.setProductId(product.getId());
+        item.setProductName(product.getProductName());
+        item.setProductType(product.getProductType());
+
+        validateQuantity(request.getQuantity());
+        item.setQuantity(request.getQuantity());
+
+        item.setOliveType(request.getOliveType());
+        item.setBagsCount(request.getBagsCount());
+        item.setNote(request.getNote());
+
+        BigDecimal unitPrice = computeFinalPrice(product, isMember);
+        item.setPrice(unitPrice);
+        item.setTotalPrice(
+                unitPrice.multiply(item.getQuantity())
+                         .setScale(2, RoundingMode.HALF_UP));
+
+        item.setCreatedAt(LocalDateTime.now());
+        item.setStatus(getStatusOrThrow("SUBMITTED"));
+
+        itemRepo.save(item);
+        recomputeOrderTotal(order);
+
+        return orderMapper.toOrderResponse(order);
+    }
+
+    // =====================================================
+    // UPDATE ITEM
+    // =====================================================
+    public OrderResponse updateItem(Long orderId,
+                                     Long itemId,
+                                     UpdateOrderItemRequest request) {
+
+        Order order = orderRepo.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Order not found with id: " + orderId));
+
+        ensureOrderEditable(order);
+
+        OrderItem item = itemRepo.findByIdAndOrderId(itemId, orderId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Order item not found. orderId="
+                        + orderId + ", itemId=" + itemId));
+
+        if (request.getQuantity() != null) {
+
+            // ✅ تحقق من المخزون فقط للـ PIECE عند التحديث
+            if ("PURCHASE".equalsIgnoreCase(item.getProductType())) {
+
+                ProductLookup product =
+                        productRepo.findById(item.getProductId())
+                                .orElseThrow(() ->
+                                        new ResourceNotFoundException(
+                                                "Product not found"));
+
+                if ("PIECE".equalsIgnoreCase(product.getUnit())) {
+
+                    int requested = request.getQuantity().intValue();
+
+                    if (product.getInventory() == null
+                            || product.getInventory() < requested) {
+                        throw new OutOfStockException(
+                                "Not enough stock for: "
+                                + product.getProductName()
+                                + ". Available: "
+                                + product.getInventory()
+                                + ", Requested: " + requested);
+                    }
+                }
+            }
+
+            validateQuantity(request.getQuantity());
+            item.setQuantity(request.getQuantity());
         }
 
-        @Transactional(readOnly = true)
-        public OrderItemResponse getItem(Long orderId, Long itemId) {
-
-                OrderItem item = itemRepo.findByIdAndOrderId(itemId, orderId)
-                                .orElseThrow(() -> new ResourceNotFoundException(
-                                                "Order item not found. orderId=" + orderId + ", itemId=" + itemId));
-
-                return orderItemMapper.toResponse(item);
+        if (request.getOliveType() != null) {
+            item.setOliveType(request.getOliveType());
         }
 
-        public OrderResponse addItem(Long orderId, AddOrderItemRequest request) {
-
-                Order order = orderRepo.findById(orderId)
-                                .orElseThrow(() -> new ResourceNotFoundException(
-                                                "Order not found with id: " + orderId));
-
-                ensureOrderEditable(order);
-
-                ProductLookup product = productRepo.findById(request.getProductId())
-                                .orElseThrow(() -> new ResourceNotFoundException(
-                                                "Product not found with id: " + request.getProductId()));
-
-                validateAddItemRules(order, product, request);
-
-                boolean isMember = customerClient
-                                .getMembership(order.getCustomerId())
-                                .isMembership();
-
-                OrderItem item = new OrderItem();
-                item.setOrder(order);
-
-                item.setProductId(product.getId());
-                item.setProductName(product.getProductName());
-                item.setProductType(product.getProductType());
-
-                validateQuantity(request.getQuantity());
-                item.setQuantity(request.getQuantity());
-
-                item.setOliveType(request.getOliveType());
-                item.setBagsCount(request.getBagsCount());
-                item.setNote(request.getNote());
-
-                BigDecimal unitPrice = computeFinalPrice(product, isMember);
-                item.setPrice(unitPrice);
-                item.setTotalPrice(
-                                unitPrice.multiply(item.getQuantity())
-                                                .setScale(2, RoundingMode.HALF_UP));
-
-                item.setCreatedAt(LocalDateTime.now());
-                item.setStatus(getStatusOrThrow("SUBMITTED"));
-
-                itemRepo.save(item);
-
-                recomputeOrderTotal(order);
-
-                return orderMapper.toOrderResponse(order);
+        if (request.getBagsCount() != null) {
+            item.setBagsCount(request.getBagsCount());
         }
 
-        public OrderResponse updateItem(Long orderId, Long itemId, UpdateOrderItemRequest request) {
-
-                Order order = orderRepo.findById(orderId)
-                                .orElseThrow(() -> new ResourceNotFoundException(
-                                                "Order not found with id: " + orderId));
-
-                ensureOrderEditable(order);
-
-                OrderItem item = itemRepo.findByIdAndOrderId(itemId, orderId)
-                                .orElseThrow(() -> new ResourceNotFoundException(
-                                                "Order item not found. orderId=" + orderId + ", itemId=" + itemId));
-
-                if (request.getQuantity() != null) {
-                        validateQuantity(request.getQuantity());
-                        item.setQuantity(request.getQuantity());
-                }
-
-                if (request.getOliveType() != null) {
-                        item.setOliveType(request.getOliveType());
-                }
-
-                if (request.getBagsCount() != null) {
-                        item.setBagsCount(request.getBagsCount());
-                }
-
-                if (request.getNote() != null) {
-                        item.setNote(request.getNote());
-                }
-
-                item.setTotalPrice(
-                                item.getPrice()
-                                                .multiply(item.getQuantity())
-                                                .setScale(2, RoundingMode.HALF_UP));
-
-                item.setUpdatedAt(LocalDateTime.now());
-
-                itemRepo.save(item);
-
-                recomputeOrderTotal(order);
-
-                return orderMapper.toOrderResponse(order);
+        if (request.getNote() != null) {
+            item.setNote(request.getNote());
         }
 
-        public void deleteItem(Long orderId, Long itemId) {
+        item.setTotalPrice(
+                item.getPrice()
+                    .multiply(item.getQuantity())
+                    .setScale(2, RoundingMode.HALF_UP));
 
-                Order order = orderRepo.findById(orderId)
-                                .orElseThrow(() -> new ResourceNotFoundException(
-                                                "Order not found with id: " + orderId));
+        item.setUpdatedAt(LocalDateTime.now());
 
-                ensureOrderInSubmittedOnly(order);
+        itemRepo.save(item);
+        recomputeOrderTotal(order);
 
-                OrderItem item = itemRepo.findByIdAndOrderId(itemId, orderId)
-                                .orElseThrow(() -> new ResourceNotFoundException(
-                                                "Order item not found. orderId=" + orderId + ", itemId=" + itemId));
+        return orderMapper.toOrderResponse(order);
+    }
 
-                itemRepo.delete(item);
+    // =====================================================
+    // DELETE ITEM
+    // =====================================================
+    public void deleteItem(Long orderId, Long itemId) {
 
-                recomputeOrderTotal(order);
+        Order order = orderRepo.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Order not found with id: " + orderId));
+
+        ensureOrderInSubmittedOnly(order);
+
+        OrderItem item = itemRepo.findByIdAndOrderId(itemId, orderId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Order item not found. orderId="
+                        + orderId + ", itemId=" + itemId));
+
+        itemRepo.delete(item);
+        recomputeOrderTotal(order);
+    }
+
+    // =====================================================
+    // UPDATE ORDER ITEM STATUS
+    // =====================================================
+    public void updateOrderItemStatus(Long orderItemId,
+                                       String newStatusName) {
+
+        OrderItem item = itemRepo.findById(orderItemId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "OrderItem not found"));
+
+        OrderStatus newStatus = getStatusOrThrow(newStatusName);
+
+        validateItemTransition(item, newStatusName);
+
+        item.setStatus(newStatus);
+        item.setUpdatedAt(LocalDateTime.now());
+        itemRepo.save(item);
+
+        recalculateOrderStatus(item.getOrder().getId());
+    }
+
+    // =====================================================
+    // VALIDATE ADD ITEM RULES + STOCK CHECK
+    // =====================================================
+    private void validateAddItemRules(Order order,
+                                       ProductLookup product,
+                                       AddOrderItemRequest request) {
+
+        if ("PURCHASE".equalsIgnoreCase(product.getProductType())) {
+
+            if (request.getNote() != null
+                    && !request.getNote().isBlank()) {
+                throw new BusinessRuleViolationException(
+                        "Note is not allowed for purchase items");
+            }
+
+            if (request.getQuantity().scale() > 0) {
+                throw new BusinessRuleViolationException(
+                        "Quantity for purchase items must be an integer");
+            }
+
+            if (request.getQuantity()
+                    .compareTo(BigDecimal.ONE) < 0) {
+                throw new BusinessRuleViolationException(
+                        "Quantity must be at least 1");
+            }
+
+            // ✅ inventory فقط للـ PIECE
+            if ("PIECE".equalsIgnoreCase(product.getUnit())) {
+
+                if (product.getInventory() == null
+                        || product.getInventory() <= 0) {
+                    throw new OutOfStockException(
+                            "Product out of stock: "
+                            + product.getProductName());
+                }
+
+                int requested = request.getQuantity().intValue();
+
+                if (product.getInventory() < requested) {
+                    throw new OutOfStockException(
+                            "Not enough stock for: "
+                            + product.getProductName()
+                            + ". Available: " + product.getInventory()
+                            + ", Requested: " + requested);
+                }
+            }
+
+            boolean exists = itemRepo.findByOrderId(order.getId())
+                    .stream()
+                    .anyMatch(i -> i.getProductId()
+                            .equals(product.getId()));
+
+            if (exists) {
+                throw new BusinessRuleViolationException(
+                        "Purchase product already exists in the order."
+                        + " Update quantity instead.");
+            }
+
+            return;
         }
 
-        private void ensureOrderExists(Long orderId) {
-                if (!orderRepo.existsById(orderId)) {
-                        throw new ResourceNotFoundException("Order not found with id: " + orderId);
-                }
+        // SERVICE
+        if ("SERVICE".equalsIgnoreCase(product.getProductType())
+                || "OLIVE".equalsIgnoreCase(product.getProductType())) {
+
+            if (request.getOliveType() == null
+                    || request.getBagsCount() == null) {
+                throw new BusinessRuleViolationException(
+                        "Service item requires oliveType and bagsCount");
+            }
+
+            boolean sameOliveTypeExists =
+                    itemRepo.findByOrderId(order.getId())
+                            .stream()
+                            .anyMatch(i ->
+                                    ("SERVICE".equalsIgnoreCase(
+                                            i.getProductType())
+                                     || "OLIVE".equalsIgnoreCase(
+                                            i.getProductType()))
+                                    && i.getOliveType() != null
+                                    && i.getOliveType()
+                                            .equalsIgnoreCase(
+                                                    request.getOliveType()));
+
+            if (sameOliveTypeExists) {
+                throw new BusinessRuleViolationException(
+                        "Service item with same oliveType already exists."
+                        + " Update quantity instead.");
+            }
+        }
+    }
+
+    // =====================================================
+    // HELPERS
+    // =====================================================
+    private void ensureOrderExists(Long orderId) {
+        if (!orderRepo.existsById(orderId)) {
+            throw new ResourceNotFoundException(
+                    "Order not found with id: " + orderId);
+        }
+    }
+
+    private void ensureOrderEditable(Order order) {
+        String status = order.getStatus()
+                .getStatusName().toUpperCase();
+        if (!status.equals("SUBMITTED")) {
+            throw new OrderNotEditableException(
+                    "Order items cannot be modified in status: "
+                    + status);
+        }
+    }
+
+    private void ensureOrderInSubmittedOnly(Order order) {
+        String status = order.getStatus()
+                .getStatusName().toUpperCase();
+        if (!status.equals("SUBMITTED")) {
+            throw new OrderNotEditableException(
+                    "Order items can be deleted only in SUBMITTED status."
+                    + " Current: " + status);
+        }
+    }
+
+    private void validateQuantity(BigDecimal qty) {
+        if (qty == null || qty.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException(
+                    "Quantity must be greater than 0");
+        }
+        if (qty.scale() > 2) {
+            throw new IllegalArgumentException(
+                    "Quantity can have at most 2 decimal places");
+        }
+    }
+
+    private BigDecimal computeFinalPrice(ProductLookup product,
+                                          boolean isMember) {
+        BigDecimal base = product.getPrice();
+
+        if (isMember && product.getMemberDiscount() != null) {
+            BigDecimal factor = BigDecimal.ONE.subtract(
+                    product.getMemberDiscount());
+            return base.multiply(factor)
+                       .setScale(2, RoundingMode.HALF_UP);
         }
 
-        private void ensureOrderEditable(Order order) {
-                String status = order.getStatus().getStatusName().toUpperCase();
+        return base.setScale(2, RoundingMode.HALF_UP);
+    }
 
-                if (!status.equals("SUBMITTED")) {
-                        throw new OrderNotEditableException(
-                                        "Order items cannot be modified in status: " + status);
-                }
+    private void recomputeOrderTotal(Order order) {
+
+        BigDecimal total = itemRepo.findByOrderId(order.getId())
+                .stream()
+                .map(OrderItem::getTotalPrice)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        order.setTotalPrice(
+                total.setScale(2, RoundingMode.HALF_UP));
+        order.setUpdatedAt(LocalDateTime.now());
+
+        orderRepo.save(order);
+    }
+
+    private OrderStatus getStatusOrThrow(String statusName) {
+        return statusRepo.findByStatusNameIgnoreCase(statusName)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "OrderStatus not found: " + statusName));
+    }
+
+    private void validateItemTransition(OrderItem item,
+                                         String nextStatus) {
+        String current = item.getStatus()
+                .getStatusName().toUpperCase();
+        String next = nextStatus.toUpperCase();
+        String type = item.getProductType().toUpperCase();
+
+        if (type.equals("PURCHASE")) {
+            if (current.equals("PAID") && next.equals("REFUNDED"))  return;
+            if (current.equals("PAID") && next.equals("COMPLETED")) return;
+            throw new BusinessRuleViolationException(
+                    "Invalid status change for PURCHASE item");
         }
 
-        private void ensureOrderInSubmittedOnly(Order order) {
-                String status = order.getStatus().getStatusName().toUpperCase();
-
-                if (!status.equals("SUBMITTED")) {
-                        throw new OrderNotEditableException(
-                                        "Order items can be deleted only in SUBMITTED status. Current: " + status);
-                }
+        if (type.equals("SERVICE")) {
+            if (current.equals("PAID")             && next.equals("REFUNDED"))         return;
+            if (current.equals("PAID")             && next.equals("IN_PRODUCTION"))    return;
+            if (current.equals("IN_PRODUCTION")    && next.equals("IN_PROGRESS"))      return;
+            if (current.equals("IN_PROGRESS")      && next.equals("READY_FOR_PICKUP")) return;
+            if (current.equals("READY_FOR_PICKUP") && next.equals("COMPLETED"))        return;
+            throw new BusinessRuleViolationException(
+                    "Invalid status change for SERVICE item");
         }
+    }
 
-        private void validateQuantity(BigDecimal qty) {
-                if (qty == null || qty.compareTo(BigDecimal.ZERO) <= 0) {
-                        throw new IllegalArgumentException("Quantity must be greater than 0");
-                }
-                if (qty.scale() > 2) {
-                        throw new IllegalArgumentException("Quantity can have at most 2 decimal places");
-                }
-        }
+    private void recalculateOrderStatus(Long orderId) {
 
-        private BigDecimal computeFinalPrice(ProductLookup product, boolean isMember) {
+        Order order = orderRepo.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Order not found"));
 
-                BigDecimal base = product.getPrice();
+        List<OrderItem> items = itemRepo.findByOrderId(orderId);
 
-                if (isMember && product.getMemberDiscount() != null) {
-                        BigDecimal factor = BigDecimal.ONE.subtract(product.getMemberDiscount());
-                        return base.multiply(factor).setScale(2, RoundingMode.HALF_UP);
-                }
+        if (items.isEmpty()) return;
 
-                return base.setScale(2, RoundingMode.HALF_UP);
-        }
+        long total = items.size();
 
-        private void recomputeOrderTotal(Order order) {
+        long refundedCount = items.stream()
+                .filter(i -> i.getStatus().getStatusName()
+                        .equalsIgnoreCase("REFUNDED"))
+                .count();
 
-                BigDecimal total = itemRepo.findByOrderId(order.getId())
-                                .stream()
-                                .map(OrderItem::getTotalPrice)
-                                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        long completedCount = items.stream()
+                .filter(i -> i.getStatus().getStatusName()
+                        .equalsIgnoreCase("COMPLETED"))
+                .count();
 
-                order.setTotalPrice(total.setScale(2, RoundingMode.HALF_UP));
-                order.setUpdatedAt(LocalDateTime.now());
+        boolean anyInProgress = items.stream()
+                .anyMatch(i -> i.getStatus().getStatusName()
+                        .equalsIgnoreCase("IN_PROGRESS"));
 
-                orderRepo.save(order);
-        }
+        boolean anyInProduction = items.stream()
+                .anyMatch(i -> i.getStatus().getStatusName()
+                        .equalsIgnoreCase("IN_PRODUCTION"));
 
-        private void validateAddItemRules(
-                        Order order,
-                        ProductLookup product,
-                        AddOrderItemRequest request) {
+        boolean allReadyForPickup = items.stream()
+                .filter(i -> i.getProductType()
+                        .equalsIgnoreCase("SERVICE"))
+                .allMatch(i -> i.getStatus().getStatusName()
+                        .equalsIgnoreCase("READY_FOR_PICKUP"));
 
-                if ("PURCHASE".equalsIgnoreCase(product.getProductType())) {
+        boolean allPaid = items.stream()
+                .allMatch(i -> i.getStatus().getStatusName()
+                        .equalsIgnoreCase("PAID"));
 
-                        if (request.getNote() != null && !request.getNote().isBlank()) {
-                                throw new BusinessRuleViolationException(
-                                                "Note is not allowed for purchase items");
-                        }
+        if      (refundedCount  == total) order.setStatus(getStatusOrThrow("REFUNDED"));
+        else if (anyInProgress)           order.setStatus(getStatusOrThrow("IN_PROGRESS"));
+        else if (anyInProduction)         order.setStatus(getStatusOrThrow("IN_PRODUCTION"));
+        else if (allReadyForPickup)       order.setStatus(getStatusOrThrow("READY_FOR_PICKUP"));
+        else if (completedCount == total) order.setStatus(getStatusOrThrow("COMPLETED"));
+        else if (allPaid)                 order.setStatus(getStatusOrThrow("PAID"));
+        else                              order.setStatus(getStatusOrThrow("SUBMITTED"));
 
-                        if (request.getQuantity().scale() > 0) {
-                                throw new BusinessRuleViolationException(
-                                                "Quantity for purchase items must be an integer number");
-                        }
-
-                        if (request.getQuantity().compareTo(BigDecimal.ONE) < 0) {
-                                throw new BusinessRuleViolationException(
-                                                "Quantity for purchase items must be at least 1");
-                        }
-
-                        boolean exists = itemRepo.findByOrderId(order.getId())
-                                        .stream()
-                                        .anyMatch(i -> i.getProductId().equals(product.getId()));
-
-                        if (exists) {
-                                throw new BusinessRuleViolationException(
-                                                "Purchase product already exists in the order. Update quantity instead.");
-                        }
-
-                        return;
-                }
-
-                if ("SERVICE".equalsIgnoreCase(product.getProductType())
-                                || "OLIVE".equalsIgnoreCase(product.getProductType())) {
-
-                        if (request.getOliveType() == null || request.getBagsCount() == null) {
-                                throw new BusinessRuleViolationException(
-                                                "Service item requires oliveType and bagsCount");
-                        }
-
-                        boolean sameOliveTypeExists = itemRepo.findByOrderId(order.getId())
-                                        .stream()
-                                        .anyMatch(i -> ("SERVICE".equalsIgnoreCase(i.getProductType())
-                                                        || "OLIVE".equalsIgnoreCase(i.getProductType()))
-                                                        && i.getOliveType() != null
-                                                        && i.getOliveType().equalsIgnoreCase(request.getOliveType()));
-
-                        if (sameOliveTypeExists) {
-                                throw new BusinessRuleViolationException(
-                                                "Service item with the same oliveType already exists. Update quantity instead.");
-                        }
-                }
-        }
-
-        public void updateOrderItemStatus(Long orderItemId, String newStatusName) {
-
-                OrderItem item = itemRepo.findById(orderItemId)
-                                .orElseThrow(() -> new ResourceNotFoundException("OrderItem not found"));
-
-                OrderStatus newStatus = getStatusOrThrow(newStatusName);
-
-                validateItemTransition(item, newStatusName);
-
-                item.setStatus(newStatus);
-                item.setUpdatedAt(LocalDateTime.now());
-                itemRepo.save(item);
-
-                recalculateOrderStatus(item.getOrder().getId());
-        }
-
-        private OrderStatus getStatusOrThrow(String statusName) {
-
-                return statusRepo
-                                .findByStatusNameIgnoreCase(statusName)
-                                .orElseThrow(() -> new ResourceNotFoundException(
-                                                "OrderStatus not found: " + statusName));
-        }
-
-        private void validateItemTransition(OrderItem item, String nextStatus) {
-
-                String current = item.getStatus().getStatusName().toUpperCase();
-                String next = nextStatus.toUpperCase();
-                String type = item.getProductType().toUpperCase();
-
-                if (type.equals("PURCHASE")) {
-
-                        if (current.equals("PAID") && next.equals("REFUNDED"))
-                                return;
-                        if (current.equals("PAID") && next.equals("COMPLETED"))
-                                return;
-
-                        throw new BusinessRuleViolationException(
-                                        "Invalid status change for PURCHASE item");
-                }
-
-                if (type.equals("SERVICE")) {
-
-                        if (current.equals("PAID") && next.equals("REFUNDED"))
-                                return;
-
-                        if (current.equals("PAID") && next.equals("IN_PRODUCTION"))
-                                return;
-                        if (current.equals("IN_PRODUCTION") && next.equals("IN_PROGRESS"))
-                                return;
-                        if (current.equals("IN_PROGRESS") && next.equals("READY_FOR_PICKUP"))
-                                return;
-                        if (current.equals("READY_FOR_PICKUP") && next.equals("COMPLETED"))
-                                return;
-
-                        throw new BusinessRuleViolationException(
-                                        "Invalid status change for SERVICE item");
-                }
-        }
-
-        private void recalculateOrderStatus(Long orderId) {
-
-                Order order = orderRepo.findById(orderId)
-                                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
-
-                List<OrderItem> items = itemRepo.findByOrderId(orderId);
-
-                if (items.isEmpty())
-                        return;
-
-                long total = items.size();
-
-                long refundedCount = items.stream()
-                                .filter(i -> i.getStatus().getStatusName().equalsIgnoreCase("REFUNDED"))
-                                .count();
-
-                long completedCount = items.stream()
-                                .filter(i -> i.getStatus().getStatusName().equalsIgnoreCase("COMPLETED"))
-                                .count();
-
-                boolean anyInProgress = items.stream()
-                                .anyMatch(i -> i.getStatus().getStatusName().equalsIgnoreCase("IN_PROGRESS"));
-
-                boolean anyInProduction = items.stream()
-                                .anyMatch(i -> i.getStatus().getStatusName().equalsIgnoreCase("IN_PRODUCTION"));
-
-                boolean allReadyForPickup = items.stream()
-                                .filter(i -> i.getProductType().equalsIgnoreCase("SERVICE"))
-                                .allMatch(i -> i.getStatus().getStatusName().equalsIgnoreCase("READY_FOR_PICKUP"));
-
-                boolean allPaid = items.stream()
-                                .allMatch(i -> i.getStatus().getStatusName().equalsIgnoreCase("PAID"));
-
-                if (refundedCount == total) {
-                        order.setStatus(getStatusOrThrow("REFUNDED"));
-                }
-
-                else if (anyInProgress) {
-                        order.setStatus(getStatusOrThrow("IN_PROGRESS"));
-                }
-
-                else if (anyInProduction) {
-                        order.setStatus(getStatusOrThrow("IN_PRODUCTION"));
-                }
-
-                else if (allReadyForPickup) {
-                        order.setStatus(getStatusOrThrow("READY_FOR_PICKUP"));
-                }
-
-                else if (completedCount == total) {
-                        order.setStatus(getStatusOrThrow("COMPLETED"));
-                }
-
-                else if (allPaid) {
-                        order.setStatus(getStatusOrThrow("PAID"));
-                }
-
-                else {
-                        order.setStatus(getStatusOrThrow("SUBMITTED"));
-                }
-
-                order.setUpdatedAt(LocalDateTime.now());
-                orderRepo.save(order);
-        }
+        order.setUpdatedAt(LocalDateTime.now());
+        orderRepo.save(order);
+    }
 }

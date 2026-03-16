@@ -50,8 +50,6 @@ public interface OrderMapper {
         dto.setProductName(item.getProductName());
         dto.setProductType(item.getProductType());
         dto.setQuantity(item.getQuantity());
-        dto.setPrice(item.getPrice());
-        dto.setTotalPrice(item.getTotalPrice());
         dto.setStatus(
                 item.getStatus() != null
                         ? item.getStatus().getStatusName()
