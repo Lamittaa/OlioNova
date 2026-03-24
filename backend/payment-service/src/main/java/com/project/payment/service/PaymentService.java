@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -84,8 +85,9 @@ public class PaymentService {
         }
 
         // 5. احسب السعر الكلي
-        BigDecimal totalPrice = BigDecimal.ZERO;
-        boolean    hasService = false;
+        BigDecimal              totalPrice  = BigDecimal.ZERO;
+        boolean                 hasService  = false;
+        List<PaymentItemDetail> itemDetails = new ArrayList<>();
 
         for (OrderItemSummary item : order.getItems()) {
 
@@ -96,7 +98,8 @@ public class PaymentService {
             }
             catch (FeignException.NotFound e) {
                 throw new ResourceNotFoundException(
-                        "Product not found with id: " + item.getProductId());
+                        "Product not found with id: "
+                        + item.getProductId());
             }
             catch (FeignException e) {
                 log.error("Product service unavailable", e);
@@ -106,59 +109,85 @@ public class PaymentService {
 
             // -------------------------------------------
             // SERVICE — عصر الزيتون
-            // weight × rate (0.4 / 0.6 / 0.8)
+            // يظهر: نوع الزيتون + عدد الشوالات + الكمية كغ + السعر
             // -------------------------------------------
-            if ("SERVICE".equalsIgnoreCase(product.getProductType())) {
+            if ("SERVICE".equalsIgnoreCase(
+                    product.getProductType())) {
 
                 hasService = true;
 
-                double  weight   = item.getQuantity();
-                boolean isMember = order.isMember();
+                double     weight    = item.getQuantity();
+                boolean    isMember  = order.isMember();
+                BigDecimal lineTotal =
+                        calculateKgPrice(weight, isMember);
 
-                totalPrice = totalPrice.add(
-                        calculateKgPrice(weight, isMember));
+                totalPrice = totalPrice.add(lineTotal);
+
+                PaymentItemDetail detail = new PaymentItemDetail();
+                detail.setProductName(product.getProductName());
+                detail.setProductType("SERVICE");
+                detail.setOliveType(item.getOliveType());
+                detail.setBagsCount(item.getBagsCount());
+                detail.setQuantity((int) weight);
+                detail.setTotal(lineTotal);
+                itemDetails.add(detail);
             }
 
             // -------------------------------------------
             // PURCHASE KG — Olive Gift
-            // نفس منطق العصر تماماً
+            // يظهر: الكمية كغ + السعر فقط
             // -------------------------------------------
-            else if ("PURCHASE".equalsIgnoreCase(product.getProductType())
+            else if ("PURCHASE".equalsIgnoreCase(
+                    product.getProductType())
                     && "KG".equalsIgnoreCase(product.getUnit())) {
 
-                double  weight   = item.getQuantity();
-                boolean isMember = order.isMember();
+                double     weight    = item.getQuantity();
+                boolean    isMember  = order.isMember();
+                BigDecimal lineTotal =
+                        calculateKgPrice(weight, isMember);
 
-                totalPrice = totalPrice.add(
-                        calculateKgPrice(weight, isMember));
+                totalPrice = totalPrice.add(lineTotal);
+
+                PaymentItemDetail detail = new PaymentItemDetail();
+                detail.setProductName(product.getProductName());
+                detail.setProductType("PURCHASE");
+                detail.setQuantity((int) weight);
+                detail.setTotal(lineTotal);
+                // oliveType و bagsCount لا تُضبط — ستختفي بـ NON_NULL
+                itemDetails.add(detail);
             }
 
             // -------------------------------------------
             // PURCHASE PIECE — Olive Oil Gallon
-            // سعر ثابت من DB × الكمية
+            // يظهر: عدد القطع + السعر فقط
             // -------------------------------------------
             else {
 
-                // تحقق من المخزون
                 if (product.getInventory() == null
                         || product.getInventory() < item.getQuantity()) {
                     throw new BusinessException(
                             "Not enough stock for: "
                             + product.getProductName()
-                            + ". Available: " + product.getInventory()
+                            + ". Available: "
+                            + product.getInventory()
                             + ", Requested: " + item.getQuantity());
                 }
 
-                BigDecimal lineTotal =
-                        product.getPrice()
-                               .multiply(BigDecimal.valueOf(
-                                       item.getQuantity()));
+                BigDecimal lineTotal = product.getPrice()
+                        .multiply(BigDecimal.valueOf(
+                                item.getQuantity()));
 
                 totalPrice = totalPrice.add(lineTotal);
+
+                PaymentItemDetail detail = new PaymentItemDetail();
+                detail.setProductName(product.getProductName());
+                detail.setProductType("PURCHASE");
+                detail.setQuantity(item.getQuantity());
+                detail.setTotal(lineTotal);
+                itemDetails.add(detail);
             }
         }
 
-        // 6. احفظ الدفعة
         Payment payment = new Payment();
         payment.setOrderId(orderId);
         payment.setTotalPrice(totalPrice);
@@ -168,14 +197,14 @@ public class PaymentService {
 
         Payment saved = paymentRepository.save(payment);
 
-        // 7. حدّث حالة الطلب إلى PAID
         try {
             orderClient.updateOrderStatus(
                     orderId,
                     Map.of("status", "PAID"));
         }
         catch (FeignException e) {
-            log.error("Order service unavailable after saving payment id={}",
+            log.error(
+                    "Order service unavailable after saving payment id={}",
                     saved.getId(), e);
             throw new ServiceUnavailableException(
                     "Order service unavailable");
@@ -187,14 +216,15 @@ public class PaymentService {
                 queueClient.issueProductionTicket(orderId);
             }
             catch (FeignException e) {
-                log.error("Queue service unavailable for orderId={}",
+                log.error(
+                        "Queue service unavailable for orderId={}",
                         orderId, e);
                 throw new ServiceUnavailableException(
                         "Queue service must be running for pressing orders");
             }
         }
 
-        return map(saved);
+        return map(saved, itemDetails);
     }
 
     // =====================================================
@@ -241,8 +271,8 @@ public class PaymentService {
     // غير مساهم   → weight × 0.8  إذا < 100 كغ
     //             → weight × 0.6  إذا ≥ 100 كغ
     // =====================================================
-    private BigDecimal calculateKgPrice(double weight, boolean isMember) {
-
+    private BigDecimal calculateKgPrice(double weight,
+                                         boolean isMember) {
         double rate;
 
         if (isMember) {
@@ -256,7 +286,26 @@ public class PaymentService {
     }
 
     // =====================================================
-    // MAP ENTITY → RESPONSE
+    // MAP — مع items (عند الإنشاء)
+    // =====================================================
+    private PaymentResponse map(Payment p,
+                                 List<PaymentItemDetail> items) {
+
+        PaymentResponse r = new PaymentResponse();
+
+        r.setId(p.getId());
+        r.setOrderId(p.getOrderId());
+        r.setTotalPrice(p.getTotalPrice());
+        r.setPaymentType(p.getPaymentType());
+        r.setPaymentDate(p.getPaymentDate());
+        r.setUserId(p.getUserId());
+        r.setItems(items);
+
+        return r;
+    }
+
+    // =====================================================
+    // MAP — بدون items (للـ get methods)
     // =====================================================
     private PaymentResponse map(Payment p) {
 
@@ -268,6 +317,7 @@ public class PaymentService {
         r.setPaymentType(p.getPaymentType());
         r.setPaymentDate(p.getPaymentDate());
         r.setUserId(p.getUserId());
+        r.setItems(List.of());
 
         return r;
     }

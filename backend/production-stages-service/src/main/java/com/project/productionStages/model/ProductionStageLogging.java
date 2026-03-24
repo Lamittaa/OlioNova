@@ -1,6 +1,5 @@
 package com.project.productionStages.model;
 
-
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -31,6 +30,9 @@ public class ProductionStageLogging {
     private String line;
 
     private Integer stageOrder;
+
+    // 🔥 مهم جداً
+    private String container;
 
     private LocalDateTime startTime;
 

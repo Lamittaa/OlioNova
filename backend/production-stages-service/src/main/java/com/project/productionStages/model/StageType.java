@@ -1,11 +1,12 @@
 package com.project.productionStages.model;
 
-
 public enum StageType {
 
+    CLEANING,    
     WASHING,
     CRUSHING,
-    MALAXATION,
-    PRESSING,
-    STORAGE
+    MALAXATION,   
+    EXTRACTION,
+    SEPARATION,
+    STORAGE      
 }

@@ -1,70 +1,35 @@
 package com.project.productionStages.repository;
 
-import com.project.productionStages.model.*;
+import com.project.productionStages.model.ProductionStage;
+import com.project.productionStages.model.StageStatus;
+import com.project.productionStages.model.StageType;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
 
 import java.util.List;
-import java.util.Optional;
 
-@Repository
 public interface ProductionStageRepository extends JpaRepository<ProductionStage, Long> {
 
-  
+    List<ProductionStage> findByLine(String line);
+
+    List<ProductionStage> findByOrderId(Long orderId);
+
     List<ProductionStage> findByOrderItemId(Long orderItemId);
 
-    Optional<ProductionStage> findByOrderItemIdAndStageOrder(
-            Long orderItemId,
-            Integer stageOrder
-    );
+    List<ProductionStage> findByStageTypeAndLine(StageType stageType, String line);
 
-    Optional<ProductionStage> findByOrderItemIdAndStageType(
-            Long orderItemId,
-            StageType stageType
-    );
-
-
-    List<ProductionStage> findByLineAndIsTemplate(
-            String line,
-            boolean isTemplate
-    );
-
-    Optional<ProductionStage> findByLineAndCurrentStatusAndIsTemplate(
-            String line,
-            StageStatus status,
-            boolean isTemplate
-    );
-
-
-    List<ProductionStage> findByLineAndStageTypeAndCurrentStatusAndIsTemplate(
-            String line,
+    long countByStageTypeAndLineAndContainerAndCurrentStatus(
             StageType stageType,
-            StageStatus status,
-            boolean isTemplate
-    );
-
-    long countByLineAndCurrentStatusAndIsTemplate(
             String line,
-            StageStatus status,
-            boolean isTemplate
+            String container,
+            StageStatus status
     );
 
-    long countByLineAndStageOrderAndCurrentStatusAndIsTemplate(
+    List<ProductionStage> findByStageTypeAndLineAndCurrentStatus(
+            StageType stageType,
             String line,
-            Integer stageOrder,
-            StageStatus status,
-            boolean isTemplate
+            StageStatus status
     );
 
-
-    List<ProductionStage> findByLineAndIsTemplateOrderByStageOrderAsc(
-            String line,
-            boolean isTemplate
-    );
-
-
-    List<ProductionStage> findByCurrentStatusAndIsTemplate(
-            StageStatus status,
-            boolean isTemplate
-    );
+    List<ProductionStage> findByStageType(StageType stageType);
+    boolean existsByOrderItemId(Long orderItemId);
 }

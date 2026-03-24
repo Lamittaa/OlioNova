@@ -31,6 +31,6 @@ public class ProductionStage {
 
     @Enumerated(EnumType.STRING)
     private StageStatus currentStatus;
-    @Builder.Default
-    private boolean isTemplate = false;
+
+    private String container;
 }

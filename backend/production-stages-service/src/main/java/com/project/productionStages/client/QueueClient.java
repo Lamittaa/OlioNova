@@ -5,14 +5,14 @@ import com.project.productionStages.config.FeignAuthForwardConfig;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.*;
 
-@FeignClient(name = "queue-service", configuration = FeignAuthForwardConfig.class)
+@FeignClient(
+    name = "queue-service",
+    configuration = FeignAuthForwardConfig.class
+)
 public interface QueueClient {
 
-        @PostMapping("/api/queues/production/{orderId}")
-        void issueProductionTicket(
-                        @PathVariable("orderId") Long orderId);
-
-        @GetMapping("/api/queues/order/{orderId}")
-        Integer getQueueNumber(
-                        @PathVariable("orderId") Long orderId);
+    @GetMapping("/api/queues/order/{orderId}")
+    Integer getQueueNumber(
+            @PathVariable("orderId") Long orderId
+    );
 }
