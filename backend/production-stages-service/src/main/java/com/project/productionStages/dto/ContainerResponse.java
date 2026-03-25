@@ -9,7 +9,6 @@ import lombok.Data;
 @Builder
 public class ContainerResponse {
 
-    private String name; 
 
     private List<ItemResponse> items;
 }

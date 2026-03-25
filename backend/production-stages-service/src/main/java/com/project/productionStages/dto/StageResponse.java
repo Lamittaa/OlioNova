@@ -11,7 +11,8 @@ import lombok.Data;
 public class StageResponse {
 
     private String stageType;
-    private String stageLabel;
+    private String containerName;
+    private String stageStatus;
     private ItemResponse item;
-    private List<ContainerResponse> containers;
+
 }

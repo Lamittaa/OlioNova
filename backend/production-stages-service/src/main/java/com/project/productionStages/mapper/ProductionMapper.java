@@ -61,7 +61,7 @@ public class ProductionMapper {
                 stageResponses.add(
                         StageResponse.builder()
                                 .stageType(stageType.name())
-                                .stageLabel(getStageLabel(stageType))
+                                .stageStatus(getStageLabel(stageType))
                                 .containers(containers)
                                 .build()
                 );
@@ -76,7 +76,7 @@ public class ProductionMapper {
                 stageResponses.add(
                         StageResponse.builder()
                                 .stageType(stageType.name())
-                                .stageLabel(getStageLabel(stageType))
+                                .stageStatus(getStageLabel(stageType))
                                 .item(stage != null ? toItemResponse(stage) : null)
                                 .build()
                 );

@@ -52,7 +52,6 @@ public class ProductionController {
     }
 
 
-
     @PostMapping("/start")
     public ResponseEntity<String> startProduction(
             @RequestBody StartProductionRequest request) {
@@ -77,5 +76,10 @@ public class ProductionController {
         List<String> lines = productionService.getAvailableLines();
 
         return ResponseEntity.ok(lines);
+    }
+
+    @GetMapping("/lines/overview")
+    public ResponseEntity<List<LineResponse>> getLinesOverview() {
+        return ResponseEntity.ok(productionService.getLineOverview());
     }
 }

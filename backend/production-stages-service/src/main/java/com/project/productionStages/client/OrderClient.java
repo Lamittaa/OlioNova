@@ -3,6 +3,7 @@ package com.project.productionStages.client;
 import com.project.productionStages.config.FeignAuthForwardConfig;
 import com.project.productionStages.dto.OrderDashboardResponse;
 
+import com.project.productionStages.dto.OrderItemResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,6 +24,11 @@ public interface OrderClient {
 
       @PostMapping("/api/orders/dashboard/bulk")
     List<OrderDashboardResponse> getOrdersByIds(
+            @RequestBody List<Long> ids
+    );
+
+      @PostMapping("/api/orders/items/bulk")
+    List<OrderItemResponse> getOrderItemssByIds(
             @RequestBody List<Long> ids
     );
 }
