@@ -2,8 +2,10 @@ package com.project.queue_service.service;
 
 
 import com.project.queue_service.dto.QueueResponseDto;
+import com.project.queue_service.dto.QueueTicketResponse;
 import com.project.queue_service.dto.QueueUpdatedEvent;
 import com.project.queue_service.exception.*;
+import com.project.queue_service.mapper.QueueTicketMapper;
 import com.project.queue_service.model.*;
 import com.project.queue_service.repository.QueueTicketRepo;
 import lombok.RequiredArgsConstructor;
@@ -190,6 +192,17 @@ private QueueTicket postServingTicket(
                                         TicketStatus.WAITING));
 
         return QueueDtoUtil.buildQueueResponse(tickets);
+    }
+
+
+    public List<QueueTicketResponse> getTicketsByQueueType(QueueType queueType, LocalDate date) {
+         return queueTicketRepo
+                .findAllByQueueTypeAndQueueDate(
+                        queueType,
+                        date)
+                .stream()
+                .map(QueueTicketMapper::mapToResponse)
+                .toList();
     }
 
 

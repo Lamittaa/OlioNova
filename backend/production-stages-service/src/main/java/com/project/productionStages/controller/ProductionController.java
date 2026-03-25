@@ -1,6 +1,7 @@
 package com.project.productionStages.controller;
 
 import com.project.productionStages.dto.*;
+import com.project.productionStages.model.StageType;
 import com.project.productionStages.service.ProductionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -34,63 +35,47 @@ public class ProductionController {
         return ResponseEntity.ok(productionService.getOrderDetails(orderId));
     }
 
-    // =========================================================
-    // ✅ 3. Next Stage
-    // =========================================================
-    @PutMapping("/items/{itemId}/next-stage")
-    public ResponseEntity<Void> moveToNextStage(
-            @PathVariable Long itemId) {
-        productionService.moveToNextStage(itemId);
-        return ResponseEntity.ok().build();
-    }
-
-    // =========================================================
-    // ✅ 4. Change Stage (dropdown)
-    // =========================================================
-    @PutMapping("/items/{itemId}/stage")
-    public ResponseEntity<Void> changeStage(
+    @PutMapping("/items/{itemId}/change-stage")
+    public ResponseEntity<MoveStageResponse> changStage(
             @PathVariable Long itemId,
-            @RequestBody ChangeStageRequest request) {
-        productionService.changeStage(itemId, request.getStageType());
-        return ResponseEntity.ok().build();
+            @RequestParam String stageType,
+            @RequestParam String container) {
+
+        StageType stageTypeEnum = StageType.valueOf(stageType.toUpperCase());
+
+        MoveStageResponse response = productionService.changeStage(
+                itemId,
+                stageTypeEnum,
+                container);
+
+        return ResponseEntity.ok(response);
     }
 
-    // =========================================================
-    // ✅ 5. Assign Line (A / B)
-    // =========================================================
-    @PutMapping("/items/{itemId}/assign-line")
-    public ResponseEntity<Void> assignLine(
-            @PathVariable Long itemId,
-            @RequestBody AssignLineRequest request) {
-        productionService.assignLine(itemId, request.getLine());
-        return ResponseEntity.ok().build();
-    }
 
-    // =========================================================
-    // ✅ 6. Assign Container (عجين / تخزين)
-    // =========================================================
-    @PutMapping("/items/{itemId}/assign-container")
-    public ResponseEntity<Void> assignContainer(
-            @PathVariable Long itemId,
-            @RequestBody AssignContainerRequest request) {
-        productionService.assignContainer(itemId, request.getContainer());
-        return ResponseEntity.ok().build();
-    }
-
-    // =========================================================
-    // ✅ 7. Get Production Lines (🔥 أهم API)
-    // =========================================================
-    @GetMapping("/lines")
-    public ResponseEntity<List<LineResponse>> getLines() {
-        return ResponseEntity.ok(productionService.getLines());
-    }
 
     @PostMapping("/start")
     public ResponseEntity<String> startProduction(
-            @RequestParam Long orderItemId,
-            @RequestParam Long orderId // ← الإضافة
-    ) {
-        productionService.startProduction(orderItemId, orderId);
+            @RequestBody StartProductionRequest request) {
+
+        productionService.startProduction(request);
+
         return ResponseEntity.ok("Production started");
+    }
+
+    @GetMapping("/line/stage")
+    public ResponseEntity<List<StageGroupResponse>> getStagesByLine(
+            @RequestParam String line) {
+        return ResponseEntity.ok(productionService.getStagesByLine(line));
+    }
+
+    // =========================================================
+    // ✅ GET available lines
+    // =========================================================
+    @GetMapping("/lines/available")
+    public ResponseEntity<List<String>> getAvailableLines() {
+
+        List<String> lines = productionService.getAvailableLines();
+
+        return ResponseEntity.ok(lines);
     }
 }

@@ -48,4 +48,7 @@ public interface QueueTicketRepo extends JpaRepository<QueueTicket, Long> {
         Long orderId,
         QueueType queueType
 );
+
+    Optional<QueueTicket> 
+    findAllByQueueTypeAndQueueDate(QueueType queueType, LocalDate date);
 }

@@ -33,4 +33,5 @@ public interface ProductionStageLoggingRepository
                         Integer stageOrder);
 
         List<ProductionStageLogging> findByLineAndEndTimeIsNull(String line);
+        
 }

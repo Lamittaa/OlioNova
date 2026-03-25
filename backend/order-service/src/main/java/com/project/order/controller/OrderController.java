@@ -1,8 +1,10 @@
 package com.project.order.controller;
 
 import com.project.order.dto.CreateOrderRequest;
+import com.project.order.dto.OrderDashboardResponse;
 import com.project.order.dto.OrderResponse;
 import com.project.order.dto.UpdateOrderStatusRequest;
+import com.project.order.service.OrderDashboardService;
 import com.project.order.service.OrderService;
 import com.project.order.service.OrderStatusService;
 
@@ -24,7 +26,8 @@ import java.util.List;
 public class OrderController {
 
         private final OrderStatusService orderStatusService;
-
+        
+        private final OrderDashboardService dashboardService;
         private final OrderService orderService;
 
         @PostMapping
@@ -75,4 +78,10 @@ public class OrderController {
                                 orderStatusService.updateStatus(id, request));
         }
 
+        @PostMapping("/bulk")
+        public ResponseEntity<List<OrderDashboardResponse>> getOrdersByIds(
+                        @RequestBody List<Long> ids) {
+                return ResponseEntity.ok(
+                                dashboardService.getOrdersByIds(ids));
+        }
 }

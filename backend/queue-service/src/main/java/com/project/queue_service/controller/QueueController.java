@@ -1,11 +1,16 @@
 package com.project.queue_service.controller;
 
 import com.project.queue_service.dto.QueueResponseDto;
+import com.project.queue_service.dto.QueueTicketResponse;
 import com.project.queue_service.model.QueueTicket;
 import com.project.queue_service.model.QueueType;
 import com.project.queue_service.model.TellerAction;
 import com.project.queue_service.service.QueueManager;
 import lombok.RequiredArgsConstructor;
+
+import java.time.LocalDate;
+import java.util.List;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -23,8 +28,8 @@ public class QueueController {
     @ResponseStatus(HttpStatus.CREATED)
     public QueueTicket issueTicket(
             @RequestParam Long orderId) {
-        return queueManager.issueTicket(QueueType.ACCOUNTING,orderId);
-    
+        return queueManager.issueTicket(QueueType.ACCOUNTING, orderId);
+
     }
 
     // ================= ADVANCE =================
@@ -45,17 +50,24 @@ public class QueueController {
         return queueManager.getQueueStatus(queueType);
     }
 
-@PreAuthorize("hasAnyRole('ACCOUNTANT','ADMIN')")
-@PostMapping("/production/{orderId}")
-@ResponseStatus(HttpStatus.CREATED)
-public QueueTicket issueProductionTicket(
-        @PathVariable Long orderId) {
+    @PreAuthorize("hasAnyRole('ACCOUNTANT','ADMIN')")
+    @PostMapping("/production/{orderId}")
+    @ResponseStatus(HttpStatus.CREATED)
+    public QueueTicket issueProductionTicket(
+            @PathVariable Long orderId) {
 
-    return queueManager.issueTicket(
-            QueueType.PRODUCTION,
-            orderId
-    );
-}
+        return queueManager.issueTicket(
+                QueueType.PRODUCTION,
+                orderId);
+    }
 
+    @GetMapping("/tickets")
+    public List<QueueTicketResponse> getTicketsByQueueType(
+            @RequestParam String queueType,
+            @RequestParam LocalDate date) {
+        return queueManager.getTicketsByQueueType(
+                QueueType.valueOf(queueType.toUpperCase()),
+                date);
+    }
 
 }
