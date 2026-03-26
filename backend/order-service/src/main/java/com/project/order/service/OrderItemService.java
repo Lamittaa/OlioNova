@@ -476,4 +476,12 @@ public class OrderItemService {
         order.setUpdatedAt(LocalDateTime.now());
         orderRepo.save(order);
     }
+
+public List<OrderItemResponse> getItemsByIds(List<Long> ids) {
+
+    return itemRepo.findAllByIdIn(ids)
+            .stream()
+            .map(orderItemMapper::toResponse)
+            .toList();
+}
 }
