@@ -121,13 +121,5 @@ public class OrderItemController {
                 return ResponseEntity.noContent().build();
         }
 
-       @PostMapping("/bulk")
-@PreAuthorize("hasAuthority('ORDER_ITEM_READ')")
-public ResponseEntity<List<OrderItemResponse>> getItemsByIds(
-        @RequestBody List<Long> itemIds) {
 
-    return ResponseEntity.ok(
-            orderItemService.getItemsByIds(itemIds)
-    );
-}
 }
