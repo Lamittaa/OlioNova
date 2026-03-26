@@ -41,4 +41,24 @@ public class OrderItemMapper {
                     : null
     );
 }
+
+
+public OrderItemBulkResponse toBulkResponse(OrderItem item) {
+
+    OrderItemBulkResponse dto = new OrderItemBulkResponse();
+
+    dto.setOrderItemId(item.getId());
+    dto.setOrderId(item.getOrder().getId());
+    dto.setOliveType(item.getOliveType());
+
+    // 🔥 حسب مشروعك: weight = quantity
+    dto.setWeight(
+        item.getQuantity() != null
+            ? item.getQuantity().doubleValue()
+            : null
+    );
+
+    return dto;
+}
+
 }

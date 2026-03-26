@@ -1,5 +1,7 @@
 package com.project.order.dto;
 
+import java.math.BigDecimal;
+
 import lombok.Getter;
 import lombok.Setter;
 
@@ -7,11 +9,10 @@ import lombok.Setter;
 @Setter
 public abstract class OrderItemResponse {
 
-  private Long orderItemId;
-
-    private Long orderId;
-
-    private String oliveType;
-
-    private Double weight;
+    private Long id;
+    private Long productId;
+    private String productName;
+    private String productType;
+    private BigDecimal quantity;
+    private String status; 
 }

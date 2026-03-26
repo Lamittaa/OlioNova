@@ -2,6 +2,7 @@ package com.project.order.service;
 
 import com.project.order.client.CustomerClient;
 import com.project.order.dto.AddOrderItemRequest;
+import com.project.order.dto.OrderItemBulkResponse;
 import com.project.order.dto.OrderItemResponse;
 import com.project.order.dto.OrderResponse;
 import com.project.order.dto.UpdateOrderItemRequest;
@@ -477,11 +478,11 @@ public class OrderItemService {
         orderRepo.save(order);
     }
 
-public List<OrderItemResponse> getItemsByIds(List<Long> ids) {
+public List<OrderItemBulkResponse> getItemsByIds(List<Long> ids) {
 
     return itemRepo.findAllByIdIn(ids)
             .stream()
-            .map(orderItemMapper::toResponse)
+            .map(orderItemMapper::toBulkResponse)
             .toList();
 }
 }
