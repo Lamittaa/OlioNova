@@ -1,6 +1,5 @@
 package com.project.order.controller;
-
-import com.project.order.dto.OrderItemResponse;
+import com.project.order.dto.OrderItemBulkResponse;
 import com.project.order.service.OrderItemService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -18,7 +17,7 @@ public class OrderItemBulkController {
 
     @PostMapping("/bulk")
     @PreAuthorize("hasAuthority('ORDER_ITEM_READ')")
-    public ResponseEntity<List<OrderItemResponse>> getItemsByIds(
+    public ResponseEntity<List<OrderItemBulkResponse>> getItemsByIds(
             @RequestBody List<Long> itemIds) {
 
         return ResponseEntity.ok(
