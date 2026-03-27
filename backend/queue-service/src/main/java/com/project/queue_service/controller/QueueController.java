@@ -70,4 +70,12 @@ public class QueueController {
                 date);
     }
 
+    @GetMapping("/{queueType}/order/{orderId}")
+    Integer getQueueNumber(@PathVariable("orderId") Long orderId, @PathVariable String queueType) {
+
+        return queueManager.getTicketNumberByOrderIdAndQueueType(orderId, queueType);
+
+    }
+
+
 }

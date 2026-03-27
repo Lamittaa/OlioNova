@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -30,120 +31,121 @@ import java.util.Optional;
 @Slf4j
 public class QueueManager {
 
-    
+
     private final QueueTicketRepo queueTicketRepo;
     private final QueueCounterService queueCounterService;
     private final ApplicationEventPublisher appEventPublisher;
- @Transactional
-public QueueTicket issueTicket(QueueType queueType, Long orderId) {
 
-    // ✅ منع إنشاء تذكرة مكررة لنفس الطلب
-  if (queueTicketRepo.existsByOrderIdAndQueueType(orderId, queueType)) {
+    @Transactional
+    public QueueTicket issueTicket(QueueType queueType, Long orderId) {
 
-    throw new DuplicateTicketException(
-            "Ticket already exists for this order in " + queueType
-    );
-}
+        // ✅ منع إنشاء تذكرة مكررة لنفس الطلب
+        if (queueTicketRepo.existsByOrderIdAndQueueType(orderId, queueType)) {
 
-    int nextNumber =
-            queueCounterService.getAndIncrementTicketNumber(queueType);
-
-    QueueTicket ticket = new QueueTicket();
-    ticket.setQueueType(queueType);
-    ticket.setQueueDate(LocalDate.now());
-    ticket.setTicketNumber(nextNumber);
-    ticket.setTicketStatus(TicketStatus.WAITING);
-    ticket.setCreatedAt(LocalDateTime.now());
-    ticket.setOrderId(orderId);
-
-    QueueTicket saved = queueTicketRepo.save(ticket);
-
-    appEventPublisher.publishEvent(
-            new QueueUpdatedEvent(queueType));
-
-    return saved;
-}
-
-
-  @Transactional(noRollbackFor = NoWaitingTicketException.class)
-public QueueTicket advanceQueue(
-        QueueType queueType,
-        TellerAction action) {
-
-    Authentication authentication =
-            SecurityContextHolder.getContext().getAuthentication();
-
-    if (!(authentication.getPrincipal() instanceof Jwt jwt)) {
-        throw new AccessDeniedException("Invalid authentication");
-    }
-
-    Long userId = jwt.getClaim("userId");
-
-    if (userId == null) {
-        throw new AccessDeniedException("userId missing in token");
-    }
-
-    // 1️⃣ check current serving ticket
-    Optional<QueueTicket> servingTicket =
-            queueTicketRepo.findByUserIdAndTicketStatusAndQueueDate(
-                    userId,
-                    TicketStatus.SERVING,
-                    LocalDate.now()
-            );
-
-    servingTicket.ifPresent(t -> postServingTicket(t, action));
-
-    // 2️⃣ get next waiting ticket
-    Optional<QueueTicket> next =
-            queueTicketRepo.findNextWaiting(queueType);
-
-    if (next.isEmpty()) {
-
-        // إذا أنهينا تذكرة فقط لا نحتاج فتح أخرى
-        if (servingTicket.isPresent()) {
-            appEventPublisher.publishEvent(
-                    new QueueUpdatedEvent(queueType)
+            throw new DuplicateTicketException(
+                    "Ticket already exists for this order in " + queueType
             );
         }
 
-        throw new NoWaitingTicketException(queueType);
+        int nextNumber =
+                queueCounterService.getAndIncrementTicketNumber(queueType);
+
+        QueueTicket ticket = new QueueTicket();
+        ticket.setQueueType(queueType);
+        ticket.setQueueDate(LocalDate.now());
+        ticket.setTicketNumber(nextNumber);
+        ticket.setTicketStatus(TicketStatus.WAITING);
+        ticket.setCreatedAt(LocalDateTime.now());
+        ticket.setOrderId(orderId);
+
+        QueueTicket saved = queueTicketRepo.save(ticket);
+
+        appEventPublisher.publishEvent(
+                new QueueUpdatedEvent(queueType));
+
+        return saved;
     }
 
-    QueueTicket t = next.get();
 
-    t.setUserId(userId);
-    t.setCalledAt(LocalDateTime.now());
-    t.setTicketStatus(TicketStatus.SERVING);
+    @Transactional(noRollbackFor = NoWaitingTicketException.class)
+    public QueueTicket advanceQueue(
+            QueueType queueType,
+            TellerAction action) {
 
-    QueueTicket saved = queueTicketRepo.save(t);
+        Authentication authentication =
+                SecurityContextHolder.getContext().getAuthentication();
 
-    appEventPublisher.publishEvent(
-            new QueueUpdatedEvent(queueType)
-    );
+        if (!(authentication.getPrincipal() instanceof Jwt jwt)) {
+            throw new AccessDeniedException("Invalid authentication");
+        }
 
-    return saved;
-}
+        Long userId = jwt.getClaim("userId");
 
-private QueueTicket postServingTicket(
-        QueueTicket t,
-        TellerAction action) {
+        if (userId == null) {
+            throw new AccessDeniedException("userId missing in token");
+        }
 
-    TicketStatus status;
+        // 1️⃣ check current serving ticket
+        Optional<QueueTicket> servingTicket =
+                queueTicketRepo.findByUserIdAndTicketStatusAndQueueDate(
+                        userId,
+                        TicketStatus.SERVING,
+                        LocalDate.now()
+                );
 
-    if (action == TellerAction.NEXT) {
+        servingTicket.ifPresent(t -> postServingTicket(t, action));
 
-        status = TicketStatus.COMPLETED;
+        // 2️⃣ get next waiting ticket
+        Optional<QueueTicket> next =
+                queueTicketRepo.findNextWaiting(queueType);
 
-    } else {
+        if (next.isEmpty()) {
 
-        status = TicketStatus.CANCELLED;
+            // إذا أنهينا تذكرة فقط لا نحتاج فتح أخرى
+            if (servingTicket.isPresent()) {
+                appEventPublisher.publishEvent(
+                        new QueueUpdatedEvent(queueType)
+                );
+            }
+
+            throw new NoWaitingTicketException(queueType);
+        }
+
+        QueueTicket t = next.get();
+
+        t.setUserId(userId);
+        t.setCalledAt(LocalDateTime.now());
+        t.setTicketStatus(TicketStatus.SERVING);
+
+        QueueTicket saved = queueTicketRepo.save(t);
+
+        appEventPublisher.publishEvent(
+                new QueueUpdatedEvent(queueType)
+        );
+
+        return saved;
     }
 
-    t.setTicketStatus(status);
-    t.setCompletedAt(LocalDateTime.now());
+    private QueueTicket postServingTicket(
+            QueueTicket t,
+            TellerAction action) {
 
-    return queueTicketRepo.save(t);
-}
+        TicketStatus status;
+
+        if (action == TellerAction.NEXT) {
+
+            status = TicketStatus.COMPLETED;
+
+        } else {
+
+            status = TicketStatus.CANCELLED;
+        }
+
+        t.setTicketStatus(status);
+        t.setCompletedAt(LocalDateTime.now());
+
+        return queueTicketRepo.save(t);
+    }
 
 //     @Transactional
 //     public QueueTicket completeTicket(
@@ -196,7 +198,7 @@ private QueueTicket postServingTicket(
 
 
     public List<QueueTicketResponse> getTicketsByQueueType(QueueType queueType, LocalDate date) {
-         return queueTicketRepo
+        return queueTicketRepo
                 .findAllByQueueTypeAndQueueDate(
                         queueType,
                         date)
@@ -206,5 +208,12 @@ private QueueTicket postServingTicket(
     }
 
 
-
+    public Integer getTicketNumberByOrderIdAndQueueType(Long orderId, String queueTypeStr) {
+        QueueType queueType = Arrays.stream(QueueType.values())
+                .filter(q -> q.name().equalsIgnoreCase(queueTypeStr)).findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("No Queue Type found with name " + queueTypeStr));
+        return queueTicketRepo.findByQueueTypeAndOrderId(queueType, orderId)
+                .map(QueueTicket::getTicketNumber)
+                .orElseThrow(() -> new ResourceNotFoundException("Ticket number not found for orderId: " + orderId));
+    }
 }

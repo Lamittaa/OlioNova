@@ -2,6 +2,7 @@ package com.project.productionStages.controller;
 
 import com.project.productionStages.dto.*;
 import com.project.productionStages.model.StageType;
+import com.project.productionStages.service.OrderManagementService;
 import com.project.productionStages.service.ProductionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -15,15 +16,16 @@ import java.util.List;
 public class ProductionController {
 
     private final ProductionService productionService;
+    private final OrderManagementService orderManagementService;
 
     // =========================================================
     // ✅ 1. Get Orders List
     // =========================================================
     @GetMapping("/orders")
-    public ResponseEntity<List<ProductionOrderListResponse>> getOrders(
+    public ResponseEntity<List<ProductionDashboardDto>> getOrders(
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String sort) {
-        return ResponseEntity.ok(productionService.getOrders(status, sort));
+        return ResponseEntity.ok(orderManagementService.getDashboardFiltered(status, sort));
     }
 
     // =========================================================

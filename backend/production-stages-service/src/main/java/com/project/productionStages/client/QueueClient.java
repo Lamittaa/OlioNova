@@ -15,8 +15,8 @@ import org.springframework.web.bind.annotation.*;
 )
 public interface QueueClient {
 
-    @GetMapping("/api/queues/order/{orderId}")
-    Integer getQueueNumber(
+    @GetMapping("/api/queues/production/order/{orderId}")
+    Integer getProductionQueueNumber(
             @PathVariable("orderId") Long orderId
     );
 
