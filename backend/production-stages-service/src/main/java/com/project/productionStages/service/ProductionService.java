@@ -26,51 +26,6 @@ public class ProductionService {
     private final OrderClient orderClient;
 
     // =========================================================
-    // ✅ 1. Get Orders List (WITH QUEUE 🔥)
-    // =========================================================
-    public List<ProductionOrderListResponse> getOrders(String status, String sort) {
-
-        List<ProductionStage> stages = stageRepository.findAll();
-
-        Map<Long, List<ProductionStage>> grouped = stages.stream()
-                .filter(s -> s.getOrderId() != null)
-                .collect(Collectors.groupingBy(ProductionStage::getOrderId));
-
-        List<ProductionOrderListResponse> result = new ArrayList<>();
-
-        for (Long orderId : grouped.keySet()) {
-
-            List<ProductionStage> orderStages = grouped.get(orderId);
-
-            int totalItems = (int) orderStages.stream()
-                    .map(ProductionStage::getOrderItemId)
-                    .distinct()
-                    .count();
-
-            // 🔥🔥 جلب رقم الدور من Queue Service
-            Integer queueNumber = null;
-
-            try {
-                queueNumber = queueClient.getQueueNumber(orderId);
-            } catch (Exception e) {
-                throw new ServiceUnavailableException(
-                        "Queue service is not available",
-                        "QUEUE_SERVICE_DOWN");
-            }
-            result.add(
-                    ProductionOrderListResponse.builder()
-                            .orderId(orderId)
-                            .status("IN_PROGRESS")
-                            .totalItems(totalItems)
-                            .completedItems(0)
-                            .queueNumber(queueNumber)
-                            .build());
-        }
-
-        return result;
-    }
-
-    // =========================================================
     // ✅ 2. Get Order Details
     // =========================================================
     public OrderDetailsResponse getOrderDetails(Long orderId) {
