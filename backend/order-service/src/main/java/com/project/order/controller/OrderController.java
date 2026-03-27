@@ -78,10 +78,9 @@ public class OrderController {
                                 orderStatusService.updateStatus(id, request));
         }
 
-        @PostMapping("/bulk")
+        @PostMapping("/dashboard/bulk")
         public ResponseEntity<List<OrderDashboardResponse>> getOrdersByIds(
                         @RequestBody List<Long> ids) {
-                return ResponseEntity.ok(
-                                dashboardService.getOrdersByIds(ids));
+                return ResponseEntity.ok(dashboardService.getOrdersByIds(ids));
         }
 }
