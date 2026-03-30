@@ -36,9 +36,8 @@ public class ProductLookupService {
         ProductLookup product = productMapper.toEntity(request);
 
         product.setProductName(name);
-        product.setProductType(request.getProductType().trim().toUpperCase());
+        product.setProductType("Purchase");
         product.setUnit(request.getUnit().trim().toUpperCase());
-
         product.setActive(true);
 
         ProductLookup saved = productRepo.save(product);

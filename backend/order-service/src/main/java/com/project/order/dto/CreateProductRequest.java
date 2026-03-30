@@ -18,13 +18,6 @@ public class CreateProductRequest {
     )
     private String productName;
 
-    @NotBlank(message = "Product type cannot be empty")
-    @Pattern(
-        regexp = "(?i)^(OLIVE|JIFT|GALLON)$",
-        message = "Product type must be one of: OLIVE, JIFT, GALLON"
-    )
-    private String productType;
-
     @Min(value = 0, message = "Inventory total quantity cannot be negative")
     private Integer inventoryTotalQuantity;
 
