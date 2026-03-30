@@ -39,193 +39,180 @@ public class PaymentService {
     // =====================================================
     // CREATE CASH PAYMENT
     // =====================================================
-    public PaymentResponse createCashPayment(CreatePaymentRequest request) {
+ public PaymentResponse createCashPayment(CreatePaymentRequest request) {
 
-        // 1. استخرج userId من الـ JWT
-        JwtAuthenticationToken auth =
-                (JwtAuthenticationToken) SecurityContextHolder
-                        .getContext()
-                        .getAuthentication();
+    // 1. استخرج userId من الـ JWT
+    JwtAuthenticationToken auth =
+            (JwtAuthenticationToken) SecurityContextHolder
+                    .getContext()
+                    .getAuthentication();
 
-        Long userId = auth.getToken().getClaim("userId");
+    Long userId = auth.getToken().getClaim("userId");
 
-        if (userId == null) {
-            throw new BusinessException(
-                    "userId missing in authentication token");
-        }
+    if (userId == null) {
+        throw new BusinessException(
+                "userId missing in authentication token");
+    }
 
-        // 2. جلب الطلب من order-service
-        OrderSummaryResponse order;
+    // 2. جلب الطلب من order-service
+    OrderSummaryResponse order;
+
+    try {
+        order = orderClient.getOrderById(request.getOrderId());
+    }
+    catch (FeignException.NotFound e) {
+        throw new ResourceNotFoundException(
+                "Order not found with id: " + request.getOrderId());
+    }
+    catch (FeignException e) {
+        log.error("Order service unavailable", e);
+        throw new ServiceUnavailableException(
+                "Order service unavailable");
+    }
+
+    Long orderId = order.getId();
+
+    // 3. منع الدفع مرتين
+    if (paymentRepository.findByOrderId(orderId).isPresent()) {
+        throw new PaymentAlreadyExistsException(
+                "Payment already exists for orderId: " + orderId);
+    }
+
+    // 4. يجب أن يكون الطلب SUBMITTED
+    if (!"SUBMITTED".equals(order.getStatus())) {
+        throw new OrderNotEditableException(
+                "Order cannot be paid in status: " + order.getStatus());
+    }
+
+    // 5. احسب السعر الكلي
+    BigDecimal              totalPrice  = BigDecimal.ZERO;
+    boolean                 hasService  = false;
+    List<PaymentItemDetail> itemDetails = new ArrayList<>();
+
+    for (OrderItemSummary item : order.getItems()) {
+
+        ProductResponse product;
 
         try {
-            order = orderClient.getOrderById(request.getOrderId());
+            product = productClient.getProduct(item.getProductId());
         }
         catch (FeignException.NotFound e) {
             throw new ResourceNotFoundException(
-                    "Order not found with id: " + request.getOrderId());
+                    "Product not found with id: "
+                    + item.getProductId());
         }
         catch (FeignException e) {
-            log.error("Order service unavailable", e);
+            log.error("Product service unavailable", e);
             throw new ServiceUnavailableException(
-                    "Order service unavailable");
+                    "Product service unavailable");
         }
 
-        Long orderId = order.getId();
+        // -------------------------------------------
+        // SERVICE — عصر الزيتون
+        // -------------------------------------------
+        if ("SERVICE".equalsIgnoreCase(product.getProductType())) {
 
-        // 3. منع الدفع مرتين
-        if (paymentRepository.findByOrderId(orderId).isPresent()) {
-            throw new PaymentAlreadyExistsException(
-                    "Payment already exists for orderId: " + orderId);
+            hasService = true;
+
+            double     weight    = item.getQuantity();
+            boolean    isMember  = order.isMember();
+            BigDecimal lineTotal = calculateKgPrice(weight, isMember);
+
+            totalPrice = totalPrice.add(lineTotal);
+
+            PaymentItemDetail detail = new PaymentItemDetail();
+            detail.setProductName(product.getProductName());
+            detail.setProductType("SERVICE");
+            detail.setOliveType(item.getOliveType());
+            detail.setBagsCount(item.getBagsCount());
+            detail.setQuantity((int) weight);
+            detail.setTotal(lineTotal);
+            itemDetails.add(detail);
         }
 
-        // 4. يجب أن يكون الطلب SUBMITTED
-        if (!"SUBMITTED".equals(order.getStatus())) {
-            throw new OrderNotEditableException(
-                    "Order cannot be paid in status: " + order.getStatus());
-        }
+        // -------------------------------------------
+        // PURCHASE — KG + PIECE
+        // -------------------------------------------
+        else if ("PURCHASE".equalsIgnoreCase(product.getProductType())) {
 
-        // 5. احسب السعر الكلي
-        BigDecimal              totalPrice  = BigDecimal.ZERO;
-        boolean                 hasService  = false;
-        List<PaymentItemDetail> itemDetails = new ArrayList<>();
+            BigDecimal lineTotal;
 
-        for (OrderItemSummary item : order.getItems()) {
-
-            ProductResponse product;
-
-            try {
-                product = productClient.getProduct(item.getProductId());
+            if ("KG".equalsIgnoreCase(product.getUnit())) {
+                double  weight   = item.getQuantity();
+                boolean isMember = order.isMember();
+                lineTotal = calculateKgPrice(weight, isMember);
             }
-            catch (FeignException.NotFound e) {
-                throw new ResourceNotFoundException(
-                        "Product not found with id: "
-                        + item.getProductId());
+            else {
+                lineTotal = product.getPrice()
+                        .multiply(BigDecimal.valueOf(item.getQuantity()));
+            }
+
+            totalPrice = totalPrice.add(lineTotal);
+
+            // ينقص المخزون المتاح
+            try {
+                DecreaseAvailabilityRequest decreaseRequest =
+                        new DecreaseAvailabilityRequest();
+                decreaseRequest.setQuantity(item.getQuantity());
+
+                productClient.decreaseAvailability(
+                        product.getId(),
+                        decreaseRequest);
             }
             catch (FeignException e) {
-                log.error("Product service unavailable", e);
+                log.error("Failed to decrease availability for product id={}",
+                        product.getId(), e);
                 throw new ServiceUnavailableException(
                         "Product service unavailable");
             }
 
-            // -------------------------------------------
-            // SERVICE — عصر الزيتون
-            // يظهر: نوع الزيتون + عدد الشوالات + الكمية كغ + السعر
-            // -------------------------------------------
-            if ("SERVICE".equalsIgnoreCase(
-                    product.getProductType())) {
-
-                hasService = true;
-
-                double     weight    = item.getQuantity();
-                boolean    isMember  = order.isMember();
-                BigDecimal lineTotal =
-                        calculateKgPrice(weight, isMember);
-
-                totalPrice = totalPrice.add(lineTotal);
-
-                PaymentItemDetail detail = new PaymentItemDetail();
-                detail.setProductName(product.getProductName());
-                detail.setProductType("SERVICE");
-                detail.setOliveType(item.getOliveType());
-                detail.setBagsCount(item.getBagsCount());
-                detail.setQuantity((int) weight);
-                detail.setTotal(lineTotal);
-                itemDetails.add(detail);
-            }
-
-            // -------------------------------------------
-            // PURCHASE KG — Olive Gift
-            // يظهر: الكمية كغ + السعر فقط
-            // -------------------------------------------
-            else if ("PURCHASE".equalsIgnoreCase(
-                    product.getProductType())
-                    && "KG".equalsIgnoreCase(product.getUnit())) {
-
-                double     weight    = item.getQuantity();
-                boolean    isMember  = order.isMember();
-                BigDecimal lineTotal =
-                        calculateKgPrice(weight, isMember);
-
-                totalPrice = totalPrice.add(lineTotal);
-
-                PaymentItemDetail detail = new PaymentItemDetail();
-                detail.setProductName(product.getProductName());
-                detail.setProductType("PURCHASE");
-                detail.setQuantity((int) weight);
-                detail.setTotal(lineTotal);
-                // oliveType و bagsCount لا تُضبط — ستختفي بـ NON_NULL
-                itemDetails.add(detail);
-            }
-
-            // -------------------------------------------
-            // PURCHASE PIECE — Olive Oil Gallon
-            // يظهر: عدد القطع + السعر فقط
-            // -------------------------------------------
-            else {
-
-                if (product.getInventory() == null
-                        || product.getInventory() < item.getQuantity()) {
-                    throw new BusinessException(
-                            "Not enough stock for: "
-                            + product.getProductName()
-                            + ". Available: "
-                            + product.getInventory()
-                            + ", Requested: " + item.getQuantity());
-                }
-
-                BigDecimal lineTotal = product.getPrice()
-                        .multiply(BigDecimal.valueOf(
-                                item.getQuantity()));
-
-                totalPrice = totalPrice.add(lineTotal);
-
-                PaymentItemDetail detail = new PaymentItemDetail();
-                detail.setProductName(product.getProductName());
-                detail.setProductType("PURCHASE");
-                detail.setQuantity(item.getQuantity());
-                detail.setTotal(lineTotal);
-                itemDetails.add(detail);
-            }
+            PaymentItemDetail detail = new PaymentItemDetail();
+            detail.setProductName(product.getProductName());
+            detail.setProductType("PURCHASE");
+            detail.setQuantity((int) item.getQuantity());
+            detail.setTotal(lineTotal);
+            itemDetails.add(detail);
         }
+    }
 
-        Payment payment = new Payment();
-        payment.setOrderId(orderId);
-        payment.setTotalPrice(totalPrice);
-        payment.setPaymentType(PaymentType.CASH);
-        payment.setPaymentDate(LocalDateTime.now());
-        payment.setUserId(userId);
+    // 6. احفظ الدفعة
+    Payment payment = new Payment();
+    payment.setOrderId(orderId);
+    payment.setTotalPrice(totalPrice);
+    payment.setPaymentType(PaymentType.CASH);
+    payment.setPaymentDate(LocalDateTime.now());
+    payment.setUserId(userId);
 
-        Payment saved = paymentRepository.save(payment);
+    Payment saved = paymentRepository.save(payment);
 
+    // 7. غير status الـ items والطلب → PAID
+    try {
+        orderClient.payOrder(orderId);
+    }
+    catch (FeignException e) {
+        log.error(
+                "Order service unavailable after saving payment id={}",
+                saved.getId(), e);
+        throw new ServiceUnavailableException(
+                "Order service unavailable");
+    }
+
+    // 8. إصدار تذكرة طابور إذا كان هناك خدمة عصر
+    if (hasService) {
         try {
-            orderClient.updateOrderStatus(
-                    orderId,
-                    Map.of("status", "PAID"));
+            queueClient.issueProductionTicket(orderId);
         }
         catch (FeignException e) {
             log.error(
-                    "Order service unavailable after saving payment id={}",
-                    saved.getId(), e);
+                    "Queue service unavailable for orderId={}",
+                    orderId, e);
             throw new ServiceUnavailableException(
-                    "Order service unavailable");
+                    "Queue service must be running for pressing orders");
         }
-
-        // 8. إصدار تذكرة طابور إذا كان هناك خدمة عصر
-        if (hasService) {
-            try {
-                queueClient.issueProductionTicket(orderId);
-            }
-            catch (FeignException e) {
-                log.error(
-                        "Queue service unavailable for orderId={}",
-                        orderId, e);
-                throw new ServiceUnavailableException(
-                        "Queue service must be running for pressing orders");
-            }
-        }
-
-        return map(saved, itemDetails);
     }
+
+    return map(saved, itemDetails);
+}
 
     // =====================================================
     // GET PAYMENT BY ID

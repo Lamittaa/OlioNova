@@ -24,8 +24,11 @@ public class ProductLookup {
     @Column(name = "product_type", length = 50, nullable = false)
     private String productType;
 
-    @Column(name = "inventory")
-    private Integer inventory;
+    @Column(name = "inventory_total_quantity")
+    private Integer inventoryTotalQuantity;
+
+    @Column(name = "inventory_availability_quantity")
+    private Integer inventoryAvailabilityQuantity;
 
     @Column(name = "price", precision = 10, scale = 2, nullable = false)
     private BigDecimal price;
@@ -35,7 +38,7 @@ public class ProductLookup {
 
     @Column(name = "unit", length = 20, nullable = false)
     private String unit;
-    
+
     @Column(name = "active", nullable = false)
     private Boolean active = true;
 
