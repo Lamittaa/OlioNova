@@ -17,4 +17,6 @@ public class OrderItemResponse {
 
     private Double weight;
 
+    private String itemStatus;
+
 }

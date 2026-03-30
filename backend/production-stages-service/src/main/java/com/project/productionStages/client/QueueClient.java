@@ -7,11 +7,12 @@ import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @FeignClient(
-    name = "queue-service",
-    configuration = FeignAuthForwardConfig.class
+        name = "queue-service",
+        configuration = FeignAuthForwardConfig.class
 )
 public interface QueueClient {
 
@@ -20,9 +21,22 @@ public interface QueueClient {
             @PathVariable("orderId") Long orderId
     );
 
-     @GetMapping("/api/queues/tickets")
+    @GetMapping("/api/queues/tickets")
     List<QueueTicketResponse> getTicketsByQueueType(
             @RequestParam String queueType,
             @RequestParam LocalDate date
     );
+
+    @PutMapping("/api/queues/tickets/{id}/status")
+    QueueTicketResponse updateStatus(
+            @RequestParam Long ticketId,
+            @RequestParam String queueType,
+            @RequestParam String status);
+
+    @PutMapping("/api/queues/tickets/status")
+    QueueTicketResponse updateStatusByOrderId(
+            @RequestParam Long orderId,
+            @RequestParam String queueType,
+            @RequestParam String status);
+
 }

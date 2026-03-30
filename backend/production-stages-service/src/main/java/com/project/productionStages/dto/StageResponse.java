@@ -10,6 +10,7 @@ import lombok.Data;
 
 public class StageResponse {
 
+    private Long stageId;
     private String stageType;
     private String containerName;
     private String stageStatus;

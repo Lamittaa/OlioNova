@@ -1,12 +1,8 @@
 package com.project.order.service;
 
 import com.project.order.client.CustomerClient;
-import com.project.order.dto.AddOrderItemRequest;
+import com.project.order.dto.*;
 import com.project.order.dto.FulfillResponse;
-import com.project.order.dto.OrderItemBulkResponse;
-import com.project.order.dto.OrderItemResponse;
-import com.project.order.dto.OrderResponse;
-import com.project.order.dto.UpdateOrderItemRequest;
 import com.project.order.exception.*;
 import com.project.order.mapper.OrderItemMapper;
 import com.project.order.mapper.OrderMapper;
@@ -393,25 +389,28 @@ private void validateAddItemRules(Order order,
     }
 
     private void validateItemTransition(OrderItem item,
-                                         String nextStatus) {
+                                        String nextStatus) {
         String current = item.getStatus()
                 .getStatusName().toUpperCase();
         String next = nextStatus.toUpperCase();
         String type = item.getProductType().toUpperCase();
 
+        if (current.equalsIgnoreCase(next)) return;
+
         if (type.equals("PURCHASE")) {
-            if (current.equals("PAID") && next.equals("REFUNDED"))  return;
+            if (current.equals("PAID") && next.equals("REFUNDED")) return;
             if (current.equals("PAID") && next.equals("COMPLETED")) return;
             throw new BusinessRuleViolationException(
                     "Invalid status change for PURCHASE item");
         }
 
         if (type.equals("SERVICE")) {
-            if (current.equals("PAID")             && next.equals("REFUNDED"))         return;
-            if (current.equals("PAID")             && next.equals("IN_PRODUCTION"))    return;
-            if (current.equals("IN_PRODUCTION")    && next.equals("IN_PROGRESS"))      return;
-            if (current.equals("IN_PROGRESS")      && next.equals("READY_FOR_PICKUP")) return;
-            if (current.equals("READY_FOR_PICKUP") && next.equals("COMPLETED"))        return;
+            if (current.equals("PAID") && next.equals("REFUNDED")) return;
+            if (current.equals("PAID") && next.equals("IN_PROGRESS")) return;
+            if (current.equals("PAID") && next.equals("IN_PRODUCTION")) return;
+            if (current.equals("IN_PRODUCTION") && next.equals("IN_PROGRESS")) return;
+            if (current.equals("IN_PROGRESS") && next.equals("READY_FOR_PICKUP")) return;
+            if (current.equals("READY_FOR_PICKUP") && next.equals("COMPLETED")) return;
             throw new BusinessRuleViolationException(
                     "Invalid status change for SERVICE item");
         }
@@ -420,50 +419,69 @@ private void validateAddItemRules(Order order,
     private void recalculateOrderStatus(Long orderId) {
 
         Order order = orderRepo.findById(orderId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Order not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
 
         List<OrderItem> items = itemRepo.findByOrderId(orderId);
 
-        if (items.isEmpty()) return;
+        if (items.isEmpty()) {
+            order.setStatus(getStatusOrThrow("SUBMITTED"));
+            order.setUpdatedAt(LocalDateTime.now());
+            orderRepo.save(order);
+            return;
+        }
 
-        long total = items.size();
+        int total = items.size();
 
-        long refundedCount = items.stream()
-                .filter(i -> i.getStatus().getStatusName()
-                        .equalsIgnoreCase("REFUNDED"))
-                .count();
+        int refundedCount = 0;
+        int completedCount = 0;
 
-        long completedCount = items.stream()
-                .filter(i -> i.getStatus().getStatusName()
-                        .equalsIgnoreCase("COMPLETED"))
-                .count();
+        boolean anyInProgress = false;
+        boolean anyInProduction = false;
 
-        boolean anyInProgress = items.stream()
-                .anyMatch(i -> i.getStatus().getStatusName()
-                        .equalsIgnoreCase("IN_PROGRESS"));
+        boolean allPaid = true;
 
-        boolean anyInProduction = items.stream()
-                .anyMatch(i -> i.getStatus().getStatusName()
-                        .equalsIgnoreCase("IN_PRODUCTION"));
+        boolean hasServiceItems = false;
+        boolean allServiceReady = true;
 
-        boolean allReadyForPickup = items.stream()
-                .filter(i -> i.getProductType()
-                        .equalsIgnoreCase("SERVICE"))
-                .allMatch(i -> i.getStatus().getStatusName()
-                        .equalsIgnoreCase("READY_FOR_PICKUP"));
+        for (OrderItem i : items) {
+            String status = i.getStatus().getStatusName();
 
-        boolean allPaid = items.stream()
-                .allMatch(i -> i.getStatus().getStatusName()
-                        .equalsIgnoreCase("PAID"));
+            // counts
+            if ("REFUNDED".equalsIgnoreCase(status)) refundedCount++;
+            if ("COMPLETED".equalsIgnoreCase(status)) completedCount++;
 
-        if      (refundedCount  == total) order.setStatus(getStatusOrThrow("REFUNDED"));
-        else if (anyInProgress)           order.setStatus(getStatusOrThrow("IN_PROGRESS"));
-        else if (anyInProduction)         order.setStatus(getStatusOrThrow("IN_PRODUCTION"));
-        else if (allReadyForPickup)       order.setStatus(getStatusOrThrow("READY_FOR_PICKUP"));
-        else if (completedCount == total) order.setStatus(getStatusOrThrow("COMPLETED"));
-        else if (allPaid)                 order.setStatus(getStatusOrThrow("PAID"));
-        else                              order.setStatus(getStatusOrThrow("SUBMITTED"));
+            // dominant states
+            if ("IN_PROGRESS".equalsIgnoreCase(status)) anyInProgress = true;
+            if ("IN_PRODUCTION".equalsIgnoreCase(status)) anyInProduction = true;
+
+            // all conditions
+            if (!"PAID".equalsIgnoreCase(status)) allPaid = false;
+
+            // service logic
+            if ("SERVICE".equalsIgnoreCase(i.getProductType())) {
+                hasServiceItems = true;
+                if (!"READY_FOR_PICKUP".equalsIgnoreCase(status)) {
+                    allServiceReady = false;
+                }
+            }
+        }
+
+        // priority resolution
+        if (refundedCount == total) {
+            order.setStatus(getStatusOrThrow("REFUNDED"));
+        } else if (anyInProgress) {
+            order.setStatus(getStatusOrThrow("IN_PROGRESS"));
+        } else if (anyInProduction) {
+            order.setStatus(getStatusOrThrow("IN_PRODUCTION"));
+        } else if (hasServiceItems && allServiceReady) {
+            order.setStatus(getStatusOrThrow("READY_FOR_PICKUP"));
+        } else if (completedCount == total) {
+            order.setStatus(getStatusOrThrow("COMPLETED"));
+        } else if (allPaid) {
+            order.setStatus(getStatusOrThrow("PAID"));
+        } else {
+            order.setStatus(getStatusOrThrow("SUBMITTED"));
+        }
 
         order.setUpdatedAt(LocalDateTime.now());
         orderRepo.save(order);

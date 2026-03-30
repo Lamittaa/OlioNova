@@ -2,16 +2,20 @@ package com.project.queue_service.controller;
 
 import com.project.queue_service.dto.QueueResponseDto;
 import com.project.queue_service.dto.QueueTicketResponse;
+import com.project.queue_service.mapper.QueueTicketMapper;
 import com.project.queue_service.model.QueueTicket;
 import com.project.queue_service.model.QueueType;
 import com.project.queue_service.model.TellerAction;
+import com.project.queue_service.model.TicketStatus;
 import com.project.queue_service.service.QueueManager;
 import lombok.RequiredArgsConstructor;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Queue;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 
@@ -77,5 +81,36 @@ public class QueueController {
 
     }
 
+    @PutMapping("/tickets/{ticketId}/status")
+    ResponseEntity<QueueTicketResponse> updateStatus(
+            @PathVariable Long ticketId,
+            @RequestParam String queueType,
+            @RequestParam String status) {
+
+        TicketStatus statusE = TicketStatus.valueOf(status.toUpperCase());
+        QueueType queueTypeE = QueueType.valueOf(queueType.toUpperCase());
+        QueueTicket updated =
+                queueManager.updateTicketStatus(queueTypeE, ticketId, null, statusE);
+
+        return ResponseEntity.ok(
+                QueueTicketMapper.mapToResponse(updated)
+        );
+    }
+    @PutMapping("/tickets/status")
+    ResponseEntity<QueueTicketResponse> updateStatus(
+            @RequestParam(required = false) Long ticketId,
+            @RequestParam(required = false) Long orderId,
+            @RequestParam String queueType,
+            @RequestParam String status) {
+
+        TicketStatus statusE = TicketStatus.valueOf(status.toUpperCase());
+        QueueType queueTypeE = QueueType.valueOf(queueType.toUpperCase());
+        QueueTicket updated =
+                queueManager.updateTicketStatus(queueTypeE, ticketId, orderId, statusE);
+
+        return ResponseEntity.ok(
+                QueueTicketMapper.mapToResponse(updated)
+        );
+    }
 
 }

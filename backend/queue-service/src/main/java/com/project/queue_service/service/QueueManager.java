@@ -216,4 +216,83 @@ public class QueueManager {
                 .map(QueueTicket::getTicketNumber)
                 .orElseThrow(() -> new ResourceNotFoundException("Ticket number not found for orderId: " + orderId));
     }
+
+    @Transactional
+    public QueueTicket updateTicketStatus(
+            QueueType queueType,
+            Long ticketId,
+            Long orderId,
+            TicketStatus newStatus) {
+
+        QueueTicket ticket;
+        if (ticketId != null) {
+            ticket = queueTicketRepo.findById(ticketId)
+                    .orElseThrow(() ->
+                            new TicketNotFoundException(ticketId));
+        } else if (orderId != null) {
+            ticket = queueTicketRepo.findByQueueTypeAndOrderId(queueType, orderId)
+                    .orElseThrow(() ->
+                            new TicketNotFoundException("No Ticket found in " + queueType + " queue for order id: " + orderId));
+        } else {
+            throw new IllegalArgumentException("At least one of Order id or Ticket id must be provided");
+        }
+
+        TicketStatus currentStatus = ticket.getTicketStatus();
+
+        // ✅ Optional: enforce valid transitions
+        validateTransition(currentStatus, newStatus);
+
+        ticket.setTicketStatus(newStatus);
+
+        // ✅ handle timestamps based on state
+        if (newStatus == TicketStatus.SERVING) {
+            ticket.setCalledAt(LocalDateTime.now());
+        }
+
+        if (newStatus == TicketStatus.COMPLETED
+                || newStatus == TicketStatus.CANCELLED) {
+            ticket.setCompletedAt(LocalDateTime.now());
+        }
+
+        QueueTicket saved = queueTicketRepo.save(ticket);
+
+        // ✅ publish event
+        appEventPublisher.publishEvent(
+                new QueueUpdatedEvent(ticket.getQueueType())
+        );
+
+        return saved;
+    }
+
+    private void validateTransition(
+            TicketStatus current,
+            TicketStatus next) {
+
+        if (current == next) return;
+
+        switch (current) {
+
+            case WAITING -> {
+                if (next != TicketStatus.SERVING
+                        && next != TicketStatus.CANCELLED) {
+                    throw new InvalidTicketStateException(
+                            "WAITING can only go to SERVING or CANCELLED");
+                }
+            }
+
+            case SERVING -> {
+                if (next != TicketStatus.COMPLETED
+                        && next != TicketStatus.CANCELLED) {
+                    throw new InvalidTicketStateException(
+                            "SERVING can only go to COMPLETED or CANCELLED");
+                }
+            }
+
+            case COMPLETED, CANCELLED -> {
+                throw new InvalidTicketStateException(
+                        "Final state cannot be changed");
+            }
+        }
+    }
+
 }

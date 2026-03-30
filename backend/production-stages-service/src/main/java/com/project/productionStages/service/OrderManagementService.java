@@ -2,16 +2,14 @@ package com.project.productionStages.service;
 
 import com.project.productionStages.client.OrderClient;
 import com.project.productionStages.client.QueueClient;
-import com.project.productionStages.dto.OrderDashboardResponse;
-import com.project.productionStages.dto.OrderItemStatusResponse;
-import com.project.productionStages.dto.ProductionDashboardDto;
-import com.project.productionStages.dto.QueueTicketResponse;
+import com.project.productionStages.dto.*;
 import com.project.productionStages.model.DashboardSort;
 import com.project.productionStages.model.ProductionStage;
 import com.project.productionStages.model.StageType;
 import com.project.productionStages.repository.ProductionStageRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.Collection;
@@ -19,9 +17,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class OrderManagementService {
     private final QueueClient queueClient;
     private final OrderClient orderClient;
@@ -59,7 +59,7 @@ public class OrderManagementService {
                 .map(QueueTicketResponse::getOrderId)
                 .toList();
 
-        List<OrderDashboardResponse> orders = orderClient.getOrdersByIds(orderIds);
+        List<OrdersDashboardDto> orders = orderClient.getOrdersByIdsForProd(orderIds);
 
         Map<Long, QueueTicketResponse> queueMap = ticketsResponse.stream()
                 .collect(Collectors.toMap(
@@ -68,9 +68,9 @@ public class OrderManagementService {
                         (t1, t2) -> t1));
 
         Map<Long, List<Long>> completedItemsByOrder = orders.stream()
-                .collect(Collectors.toMap(OrderDashboardResponse::getOrderId, o -> {
+                .collect(Collectors.toMap(OrdersDashboardDto::getOrderId, o -> {
                             return o.getItems().stream()
-                                    .filter(i -> i.getStatus().equals("COMPLETED"))
+                                    .filter(i -> Stream.of("COMPLETED","READY_FOR_PICKUP").anyMatch(item->item.equals(i.getStatus())))
                                     .map(OrderItemStatusResponse::getId)
                                     .toList();
                         }

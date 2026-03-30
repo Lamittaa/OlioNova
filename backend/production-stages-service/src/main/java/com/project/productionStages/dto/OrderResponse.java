@@ -11,13 +11,11 @@ import lombok.NoArgsConstructor;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class OrderDashboardResponse {
+public class OrderResponse {
 
     private Long orderId;
 
-    private int itemsCount;
-
-    private long completedItems;
+    private String status;
 
     private List<OrderItemStatusResponse> items;
 }

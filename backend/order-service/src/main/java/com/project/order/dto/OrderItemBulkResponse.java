@@ -7,7 +7,9 @@ import lombok.Setter;
 @Setter
 public class OrderItemBulkResponse {
 
-      private Long orderItemId;
+    private Long orderItemId;
+
+    private String itemStatus;
 
     private Long orderId;
 

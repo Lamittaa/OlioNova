@@ -9,6 +9,8 @@ public class OrderItemStageResponse {
 
     private Long orderItemId;
 
+    private String itemStatus;
+
     private String oliveType;
 
     private Double weight;
@@ -16,6 +18,8 @@ public class OrderItemStageResponse {
     private String line;
 
     private String stageType;
+
+    private Integer stageOrder;
 
     private String container;
 }

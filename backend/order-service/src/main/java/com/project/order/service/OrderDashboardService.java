@@ -7,6 +7,7 @@ import com.project.order.repository.OrderRepo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -23,25 +24,17 @@ public class OrderDashboardService {
 
         return orders.stream().map(order -> {
 
-            int itemsCount = order.getItems().size();
-
-            long completedItems = order.getItems().stream()
-                    .filter(item ->
-                            item.getStatus().getStatusName().equalsIgnoreCase("COMPLETED")
-                    )
-                    .count();
-
             List<OrderItemStatusResponse> items = order.getItems().stream()
                     .map(item -> OrderItemStatusResponse.builder()
                             .id(item.getId())
                             .status(item.getStatus().getStatusName())
+                            .productType(item.getProductType())
                             .build())
                     .collect(Collectors.toList());
 
             return OrderDashboardResponse.builder()
                     .orderId(order.getId())
-                    .itemsCount(itemsCount)
-                    .completedItems(completedItems)
+                    .status(order.getStatus().getStatusName())
                     .items(items)
                     .build();
 
