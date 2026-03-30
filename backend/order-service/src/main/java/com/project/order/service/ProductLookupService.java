@@ -5,9 +5,11 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.project.order.dto.CreateProductRequest;
+import com.project.order.dto.InventoryResponse;
 import com.project.order.dto.ProductResponse;
 import com.project.order.dto.UpdateInventoryRequest;
 import com.project.order.dto.UpdateProductRequest;
+import com.project.order.exception.BusinessRuleViolationException;
 import com.project.order.exception.EntityAlreadyExistsException;
 import com.project.order.exception.ResourceNotFoundException;
 import com.project.order.mapper.ProductMapper;
@@ -81,14 +83,15 @@ public class ProductLookupService {
     }
 
     public ProductResponse updateInventory(Long id, UpdateInventoryRequest request) {
-        ProductLookup product = productRepo.findByIdAndActiveTrue(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
+    ProductLookup product = productRepo.findByIdAndActiveTrue(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
 
-        product.setInventory(request.getInventory());
+    product.setInventoryTotalQuantity(request.getInventoryTotalQuantity());
+  
 
-        ProductLookup saved = productRepo.save(product);
-        return productMapper.toProductResponse(saved);
-    }
+    ProductLookup saved = productRepo.save(product);
+    return productMapper.toProductResponse(saved);
+}
 
     public void deleteProduct(Long id) {
         ProductLookup product = productRepo.findById(id)
@@ -113,4 +116,57 @@ public class ProductLookupService {
         product.setActive(true);
         productRepo.save(product);
     }
+    public void decreaseAvailability(Long id, Integer quantity) {
+    ProductLookup product = productRepo.findByIdAndActiveTrue(id)
+            .orElseThrow(() -> new ResourceNotFoundException(
+                    "Product not found with id: " + id));
+
+    int current = product.getInventoryAvailabilityQuantity() == null
+            ? 0 : product.getInventoryAvailabilityQuantity();
+
+    product.setInventoryAvailabilityQuantity(current - quantity);
+    productRepo.save(product);
+}
+
+public InventoryResponse getInventory(Long id) {
+    ProductLookup product = productRepo.findByIdAndActiveTrue(id)
+            .orElseThrow(() -> new ResourceNotFoundException(
+                    "Product not found with id: " + id));
+
+    InventoryResponse response = new InventoryResponse();
+    response.setInventoryTotalQuantity(product.getInventoryTotalQuantity());
+    response.setInventoryAvailabilityQuantity(product.getInventoryAvailabilityQuantity());
+
+    return response;
+}
+
+public ProductResponse updateTotalInventory(Long id, UpdateInventoryRequest request) {
+    ProductLookup product = productRepo.findByIdAndActiveTrue(id)
+            .orElseThrow(() -> new ResourceNotFoundException(
+                    "Product not found with id: " + id));
+
+    product.setInventoryTotalQuantity(request.getInventoryTotalQuantity());
+
+    ProductLookup saved = productRepo.save(product);
+    return productMapper.toProductResponse(saved);
+}
+
+
+// في ProductLookupService
+public ProductResponse addInventory(Long id, UpdateInventoryRequest request) {
+    ProductLookup product = productRepo.findByIdAndActiveTrue(id)
+            .orElseThrow(() -> new ResourceNotFoundException(
+                    "Product not found with id: " + id));
+
+    if (product.getInventoryTotalQuantity() != null) {
+        throw new BusinessRuleViolationException(
+                "Inventory already exists. Use PATCH to update.");
+    }
+
+    product.setInventoryTotalQuantity(request.getInventoryTotalQuantity());
+    product.setInventoryAvailabilityQuantity(request.getInventoryTotalQuantity());
+
+    ProductLookup saved = productRepo.save(product);
+    return productMapper.toProductResponse(saved);
+}
 }

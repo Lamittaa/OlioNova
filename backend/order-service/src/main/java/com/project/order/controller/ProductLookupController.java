@@ -1,10 +1,12 @@
 package com.project.order.controller;
 
 import com.project.order.dto.CreateProductRequest;
+import com.project.order.dto.DecreaseAvailabilityRequest;
 import com.project.order.dto.ProductResponse;
 import com.project.order.dto.UpdateInventoryRequest;
 import com.project.order.dto.UpdateProductRequest;
 import com.project.order.dto.ErrorResponse;
+import com.project.order.dto.InventoryResponse;
 import com.project.order.service.ProductLookupService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -26,6 +28,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/products")
@@ -322,4 +325,57 @@ public class ProductLookupController {
         productService.activateProduct(id);
         return ResponseEntity.noContent().build();
     }
+
+@PutMapping("/{id}/inventory/availability")
+public ResponseEntity<Void> decreaseAvailability(
+        @PathVariable Long id,
+        @Valid @RequestBody DecreaseAvailabilityRequest request) {
+    productService.decreaseAvailability(id, request.getQuantity());
+    return ResponseEntity.noContent().build();
+}
+@GetMapping("/{id}/inventory")
+@PreAuthorize("hasAnyRole('ADMIN','ACCOUNTANT') and hasAuthority('PRODUCT_READ')")
+@Operation(summary = "Get product inventory", description = "Returns total and available inventory for a product")
+@ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Inventory returned successfully",
+                content = @Content(schema = @Schema(implementation = InventoryResponse.class))),
+        @ApiResponse(responseCode = "404", description = "Product not found"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @ApiResponse(responseCode = "403", description = "Forbidden")
+})
+public ResponseEntity<InventoryResponse> getInventory(
+        @PathVariable @Min(value = 1, message = "Product ID must be greater than 0") Long id) {
+    return ResponseEntity.ok(productService.getInventory(id));
+}
+
+
+@PatchMapping("/{id}/inventory/total")
+@PreAuthorize("hasAnyRole('ADMIN','ACCOUNTANT') and hasAuthority('PRODUCT_UPDATE_INVENTORY')")
+@Operation(summary = "Update total inventory only", description = "Updates inventoryTotalQuantity only without touching availability")
+@ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Inventory updated successfully",
+                content = @Content(schema = @Schema(implementation = ProductResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Validation error"),
+        @ApiResponse(responseCode = "404", description = "Product not found"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @ApiResponse(responseCode = "403", description = "Forbidden")
+})
+public ResponseEntity<ProductResponse> updateTotalInventory(
+        @PathVariable @Min(value = 1, message = "Product ID must be greater than 0") Long id,
+        @Valid @RequestBody UpdateInventoryRequest request) {
+    return ResponseEntity.ok(productService.updateTotalInventory(id, request));
+}
+
+@PostMapping("/{id}/inventory")
+@PreAuthorize("hasAnyRole('ADMIN','ACCOUNTANT')")
+@Operation(summary = "Add inventory for the first time")
+public ResponseEntity<ProductResponse> addInventory(
+        @PathVariable @Min(value = 1) Long id,
+        @Valid @RequestBody UpdateInventoryRequest request) {
+    return ResponseEntity.status(HttpStatus.CREATED)
+            .body(productService.addInventory(id, request));
+}
+
+
+
 }

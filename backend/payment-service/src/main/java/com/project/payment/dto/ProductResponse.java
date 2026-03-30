@@ -11,9 +11,10 @@ public class ProductResponse {
 
     private Long       id;
     private String     productName;
-    private String     productType;  // SERVICE / PURCHASE
-    private String     unit;         // KG / PIECE  ← هذا الناقص
+    private String     productType;
+    private String     unit;
     private BigDecimal price;
-    private Integer    inventory;    // null = غير محدود (SERVICE)
+    private Integer    inventoryTotalQuantity;
+    private Integer    inventoryAvailabilityQuantity;
     private boolean    active;
 }

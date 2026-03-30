@@ -25,8 +25,11 @@ public class CreateProductRequest {
     )
     private String productType;
 
-    @Min(value = 0, message = "Inventory cannot be negative")
-    private Integer inventory;
+    @Min(value = 0, message = "Inventory total quantity cannot be negative")
+    private Integer inventoryTotalQuantity;
+
+    @Min(value = 0, message = "Inventory availability quantity cannot be negative")
+    private Integer inventoryAvailabilityQuantity;
 
     @NotNull(message = "Price cannot be null")
     @DecimalMin(value = "0.00", inclusive = false, message = "Price must be greater than 0")

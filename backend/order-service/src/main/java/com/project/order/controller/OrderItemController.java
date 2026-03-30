@@ -1,6 +1,7 @@
 package com.project.order.controller;
 
 import com.project.order.dto.AddOrderItemRequest;
+import com.project.order.dto.FulfillResponse;
 import com.project.order.dto.OrderItemResponse;
 import com.project.order.dto.OrderResponse;
 import com.project.order.dto.UpdateOrderItemRequest;
@@ -111,7 +112,7 @@ public class OrderItemController {
         @Operation(summary = "Delete order item", description = "Deletes an item from an order (only allowed in SUBMITTED status)")
         @ApiResponses({
                         @ApiResponse(responseCode = "204", description = "Item deleted successfully"),
-                        @ApiResponse(responseCode = "403", description = "Forbidden"),
+                         @ApiResponse(responseCode = "403", description = "Forbidden"),
                         @ApiResponse(responseCode = "404", description = "Order or item not found")
         })
         public ResponseEntity<Void> deleteItem(
@@ -120,6 +121,48 @@ public class OrderItemController {
                 orderItemService.deleteItem(orderId, itemId);
                 return ResponseEntity.noContent().build();
         }
+ @PostMapping("/{itemId}/fulfill")
+@PreAuthorize("hasAnyRole('ADMIN','RECEPTIONIST')")
+@Operation(summary = "Fulfill order item", description = """
+        Marks a PURCHASE item as fulfilled (picked up by customer).
+        - Item must be in PAID status
+        - Decreases inventoryTotalQuantity
+        - Changes item status to COMPLETED
+        """)
+@ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Item fulfilled successfully"),
+        @ApiResponse(responseCode = "400", description = "Business rule violation"),
+        @ApiResponse(responseCode = "403", description = "Forbidden"),
+        @ApiResponse(responseCode = "404", description = "Order or item not found")
+})
+public ResponseEntity<FulfillResponse> fulfillItem(
+        @PathVariable @Min(1) Long orderId,
+        @PathVariable @Min(1) Long itemId) {
+    return ResponseEntity.ok(
+            orderItemService.fulfillItem(orderId, itemId));
+}
 
 
+@GetMapping("/{itemId}/status")
+@PreAuthorize("hasAnyRole('ADMIN')")
+@Operation(summary = "Get order item status")
+@ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Status returned successfully"),
+        @ApiResponse(responseCode = "404", description = "Order or item not found"),
+        @ApiResponse(responseCode = "403", description = "Forbidden")
+})
+public ResponseEntity<String> getItemStatus(
+        @PathVariable @Min(1) Long orderId,
+        @PathVariable @Min(1) Long itemId) {
+    return ResponseEntity.ok(
+            orderItemService.getItem(orderId, itemId).getStatus());
+}
+
+
+@GetMapping("/possible-statuses")
+@PreAuthorize("hasAnyRole('ADMIN')") 
+@Operation(summary = "Get all possible statuses for order items")
+public ResponseEntity<List<String>> getPossibleStatuses() {
+    return ResponseEntity.ok(orderItemService.getPossibleStatuses());
+}
 }

@@ -222,76 +222,71 @@ public class OrderService {
     // =====================================================
     // VALIDATE ORDER ITEMS + STOCK CHECK
     // =====================================================
-    private void validateOrderItems(
-            List<CreateOrderItemRequest> items) {
+ private void validateOrderItems(
+        List<CreateOrderItemRequest> items) {
 
-        if (items == null || items.isEmpty()) {
-            throw new InvalidOrderItemsException(
-                    "Order must contain at least one item");
-        }
+    if (items == null || items.isEmpty()) {
+        throw new InvalidOrderItemsException(
+                "Order must contain at least one item");
+    }
 
-        Set<Long>   purchaseProducts = new HashSet<>();
-        Set<String> oliveServices    = new HashSet<>();
+    Set<Long>   purchaseProducts = new HashSet<>();
+    Set<String> oliveServices    = new HashSet<>();
 
-        for (CreateOrderItemRequest item : items) {
+    for (CreateOrderItemRequest item : items) {
 
-            ProductLookup product =
-                    productRepo.findById(item.getProductId())
-                            .orElseThrow(() ->
-                                    new InvalidOrderItemsException(
-                                            "Invalid productId: "
-                                            + item.getProductId()));
+        ProductLookup product =
+                productRepo.findById(item.getProductId())
+                        .orElseThrow(() ->
+                                new InvalidOrderItemsException(
+                                        "Invalid productId: "
+                                        + item.getProductId()));
 
-            if ("PURCHASE".equalsIgnoreCase(
-                    product.getProductType())) {
+        if ("PURCHASE".equalsIgnoreCase(product.getProductType())) {
 
-                // ✅ inventory فقط للـ PIECE (الجالون)
-                // KG (Olive Gift) لا يحتاج — الزبون يجلب كيلوه
-                if ("PIECE".equalsIgnoreCase(product.getUnit())) {
-
-                    if (product.getInventory() == null
-                            || product.getInventory() <= 0) {
-                        throw new OutOfStockException(
-                                "Product out of stock: "
-                                + product.getProductName());
-                    }
-
-                    int requested = item.getQuantity().intValue();
-
-                    if (product.getInventory() < requested) {
-                        throw new OutOfStockException(
-                                "Not enough stock for: "
-                                + product.getProductName()
-                                + ". Available: "
-                                + product.getInventory()
-                                + ", Requested: " + requested);
-                    }
-                }
-
-                if (!purchaseProducts.add(product.getId())) {
-                    throw new InvalidOrderItemsException(
-                            "Duplicate purchase product");
-                }
-
+            // ✅ شيك على المخزون لكل PURCHASE
+            if (product.getInventoryAvailabilityQuantity() == null
+                    || product.getInventoryAvailabilityQuantity() <= 0) {
+                throw new OutOfStockException(
+                        "Product out of stock: "
+                        + product.getProductName());
             }
-            else {
-                // SERVICE
-                if (item.getOliveType() == null
-                        || item.getBagsCount() == null) {
-                    throw new InvalidOrderItemsException(
-                            "Service requires oliveType & bagsCount");
-                }
 
-                String key = product.getId()
-                        + "|" + item.getOliveType();
+            int requested = item.getQuantity().intValue();
 
-                if (!oliveServices.add(key)) {
-                    throw new InvalidOrderItemsException(
-                            "Duplicate service with same oliveType");
-                }
+            if (product.getInventoryAvailabilityQuantity() < requested) {
+                throw new OutOfStockException(
+                        "Not enough stock for: "
+                        + product.getProductName()
+                        + ". Available: "
+                        + product.getInventoryAvailabilityQuantity()
+                        + ", Requested: " + requested);
+            }
+
+            if (!purchaseProducts.add(product.getId())) {
+                throw new InvalidOrderItemsException(
+                        "Duplicate purchase product");
+            }
+
+        }
+        else {
+            // SERVICE
+            if (item.getOliveType() == null
+                    || item.getBagsCount() == null) {
+                throw new InvalidOrderItemsException(
+                        "Service requires oliveType & bagsCount");
+            }
+
+            String key = product.getId()
+                    + "|" + item.getOliveType();
+
+            if (!oliveServices.add(key)) {
+                throw new InvalidOrderItemsException(
+                        "Duplicate service with same oliveType");
             }
         }
     }
+}
 
     // =====================================================
     // HELPERS

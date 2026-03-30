@@ -22,4 +22,7 @@ public interface OrderClient {
             @PathVariable Long id,
             @RequestBody Map<String, String> body
     );
+
+    @PostMapping("/api/orders/{id}/pay")
+void payOrder(@PathVariable Long id);
 }
