@@ -50,6 +50,7 @@ public OrderItemBulkResponse toBulkResponse(OrderItem item) {
     dto.setOrderItemId(item.getId());
     dto.setOrderId(item.getOrder().getId());
     dto.setOliveType(item.getOliveType());
+    dto.setItemStatus(item.getStatus().getStatusName());
 
     // 🔥 حسب مشروعك: weight = quantity
     dto.setWeight(

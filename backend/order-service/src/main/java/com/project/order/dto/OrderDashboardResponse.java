@@ -11,9 +11,7 @@ public class OrderDashboardResponse {
 
     private Long orderId;
 
-    private int itemsCount;
-
-    private long completedItems;
+    private String status;
 
     private List<OrderItemStatusResponse> items;
 }

@@ -5,11 +5,9 @@ import com.project.productionStages.client.QueueClient;
 import com.project.productionStages.dto.*;
 import com.project.productionStages.exception.BusinessRuleException;
 import com.project.productionStages.exception.ResourceNotFoundException;
-import com.project.productionStages.exception.ServiceUnavailableException;
 import com.project.productionStages.model.*;
 import com.project.productionStages.repository.ProductionStageRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +29,17 @@ public class ProductionService {
     public OrderDetailsResponse getOrderDetails(Long orderId) {
 
         List<ProductionStage> stages = stageRepository.findByOrderId(orderId);
+        List<OrdersDashboardDto> orderResponseList = orderClient.getOrdersByIdsForProd(List.of(orderId));
+        OrdersDashboardDto orderResponse;
+        if (!orderResponseList.isEmpty()) {
+            orderResponse = orderResponseList.getFirst();
+        } else {
+            throw new ResourceNotFoundException("Order Not Found");
+        }
+        Map<Long, OrderItemResponse> orderItemMap = orderClient.getOrderItemsByIds(orderResponse.getItems().stream()
+                        .map(OrderItemStatusResponse::getId).toList())
+                .stream()
+                .collect(Collectors.toMap(OrderItemResponse::getOrderItemId, i -> i));
 
         if (stages.isEmpty()) {
             throw new ResourceNotFoundException("Order not found: " + orderId);
@@ -41,76 +50,47 @@ public class ProductionService {
 
         List<OrderItemStageResponse> items = new ArrayList<>();
 
-        for (Long itemId : grouped.keySet()) {
+        for (Long itemId : orderItemMap.keySet()) {
 
             List<ProductionStage> itemStages = grouped.get(itemId);
 
-            ProductionStage current = itemStages.stream()
+            var orderItem = orderItemMap.get(itemId);
+
+            var itemResponse = OrderItemStageResponse.builder()
+                    .orderItemId(itemId)
+                    .itemStatus(orderItem.getItemStatus())
+                    .oliveType(orderItem.getOliveType())
+                    .weight(orderItem.getWeight())
+                    .build();
+            ProductionStage current = Optional.ofNullable(itemStages).map(is -> is.stream()
                     .filter(s -> s.getCurrentStatus() == StageStatus.IN_PROGRESS)
                     .findFirst()
-                    .orElse(null);
+                    .orElse(null)).orElse(null);
+            if (current != null) {
 
-            if (current == null)
-                continue;
-
-            items.add(
-                    OrderItemStageResponse.builder()
-                            .orderItemId(itemId)
-                            .stageType(current.getStageType().name())
-                            .line(current.getLine())
-                            .container(current.getContainer())
-                            .oliveType("TODO")
-                            .weight(0.0)
-                            .build());
+                itemResponse.setStageOrder(current.getStageOrder());
+                itemResponse.setStageType(current.getStageType().name());
+                itemResponse.setLine(current.getLine());
+                itemResponse.setContainer(current.getContainer());
+            }
+            items.add(itemResponse);
         }
 
         return OrderDetailsResponse.builder()
                 .orderId(orderId)
-                .status("IN_PROGRESS")
+                .status(orderResponse.getStatus())
                 .items(items)
                 .build();
     }
 
-
-    // =========================================================
-    // ✅ 5. Change Stage (manual)
-    // =========================================================
-    public void changeStage(Long itemId, String stageTypeStr) {
-
-        StageType newStage;
-
-        try {
-            newStage = StageType.valueOf(stageTypeStr);
-        } catch (Exception e) {
-            throw new BusinessRuleException(
-                    "Invalid stage type",
-                    "INVALID_STAGE");
-        }
-
-        ProductionStage current = getCurrentStage(itemId);
-
-        current.setCurrentStatus(StageStatus.EMPTY);
-        current.setOrderItemId(null);
-
-        stageRepository.save(current);
-
-        ProductionStage next = stageRepository
-                .findByStageTypeAndLine(newStage, current.getLine())
-                .stream()
-                .findFirst()
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Stage not found for type: " + newStage));
-
-        next.setOrderItemId(itemId);
-        next.setCurrentStatus(StageStatus.IN_PROGRESS);
-
-        stageRepository.save(next);
-    }
-
-
     public MoveStageResponse changeStage(Long itemId, StageType nextStageType, String nextContainer) {
 
         ProductionStage current = getCurrentStage(itemId);
+
+        // =========================================================
+        // تنظيف الحالي
+        // =========================================================
+        emptyStage(current);
 
         Long orderId = current.getOrderId();
         String line = current.getLine();
@@ -126,15 +106,6 @@ public class ProductionService {
 
         boolean isLast = next.getStageType() == StageType.STORAGE;
 
-        // =========================================================
-        // تنظيف الحالي
-        // =========================================================
-        current.setCurrentStatus(StageStatus.EMPTY);
-        current.setOrderItemId(null);
-        current.setOrderId(null);
-        current.setContainer(null);
-
-        stageRepository.save(current);
 
         // =========================================================
         // نقل
@@ -149,8 +120,8 @@ public class ProductionService {
         // إذا STORAGE → update order
         // =========================================================
         if (isLast) {
-            orderClient.updateOrderStatus(
-                    orderId,
+            orderClient.updateOrderItemStatus(
+                    itemId,
                     Map.of("status", "READY_FOR_PICKUP")
             );
         }
@@ -159,6 +130,13 @@ public class ProductionService {
                 .isLastStage(isLast)
                 .message(isLast ? "Reached final stage" : "Moved to next stage")
                 .build();
+    }
+
+    private void emptyStage(ProductionStage current) {
+        current.setCurrentStatus(StageStatus.EMPTY);
+        current.setOrderItemId(null);
+        current.setOrderId(null);
+        stageRepository.save(current);
     }
 
     // =========================================================
@@ -215,6 +193,10 @@ public class ProductionService {
         stage.setCurrentStatus(StageStatus.IN_PROGRESS);
 
         stageRepository.save(stage);
+
+        orderClient.updateOrderStatus(orderId, Map.of("status", "IN_PROGRESS"));
+        orderClient.updateOrderItemStatus(orderItemId, Map.of("status", "IN_PROGRESS"));
+        queueClient.updateStatusByOrderId(orderId, "PRODUCTION", "SERVING");
     }
 
     public List<StageGroupResponse> getStagesByLine(String line) {
@@ -265,7 +247,7 @@ public class ProductionService {
                 .toList();
 
         Map<Long, ItemResponse> orderItemResponseList =
-                orderClient.getOrderItemssByIds(orderItemsIds).stream()
+                orderClient.getOrderItemsByIds(orderItemsIds).stream()
                         .map(i -> ItemResponse.builder()
                                 .orderItemId(i.getOrderItemId())
                                 .orderId(i.getOrderId())
@@ -288,6 +270,7 @@ public class ProductionService {
                             .containerName(s.getContainer())
                             .stageStatus(s.getCurrentStatus().name())
                             .stageType(s.getStageType().name())
+                            .stageId(s.getId())
                             .build())
                     .toList();
 
@@ -302,5 +285,58 @@ public class ProductionService {
         return lineResponseList;
     }
 
+    @Transactional
+    public void markStorageDelivered(List<Long> storageStageIds) {
+
+        var storages = stageRepository.findAllById(storageStageIds);
+
+        if (storages.size() != storageStageIds.size()) {
+            throw new ResourceNotFoundException("Some stages not found");
+        }
+
+        // validate first
+        for (var s : storages) {
+            if (s.getStageType() != StageType.STORAGE) {
+                throw new IllegalArgumentException("Invalid stage type");
+            }
+        }
+
+        // update items
+        for (var s : storages) {
+            orderClient.updateOrderItemStatus(
+                    s.getOrderItemId(),
+                    Map.of("status", StageStatus.COMPLETED.name())
+            );
+
+            emptyStage(s);
+        }
+
+        // fetch distinct orders
+        var orderIds = storages.stream()
+                .map(ProductionStage::getOrderId)
+                .distinct()
+                .toList();
+
+        var orders = orderClient.getOrdersByIds(orderIds);
+
+        Set<Long> processed = new HashSet<>();
+
+        for (var order : orders) {
+
+            if (!processed.add(order.getOrderId())) continue;
+            if (order.getItems() == null || order.getItems().isEmpty()) continue;
+
+            boolean allCompleted = order.getItems().stream()
+                    .allMatch(i -> i.getStatus().equalsIgnoreCase("COMPLETED"));
+
+            if (allCompleted) {
+                queueClient.updateStatusByOrderId(
+                        order.getOrderId(),
+                        "PRODUCTION",
+                        "COMPLETED"
+                );
+            }
+        }
+    }
 
 }

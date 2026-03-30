@@ -52,7 +52,7 @@ List<ProductionStage> findByLineAndStageOrder(String line, Integer stageOrder);
 @Query("""
     SELECT DISTINCT p.line
     FROM ProductionStage p
-    WHERE p.currentStatus = 'EMPTY'
+    WHERE p.currentStatus = 'EMPTY' AND p.stageOrder = 1
 """)
 List<String> findAvailableLines();
 }

@@ -25,7 +25,7 @@ public class ProductionController {
     public ResponseEntity<List<ProductionDashboardDto>> getOrders(
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String sort) {
-        return ResponseEntity.ok(orderManagementService.getDashboardFiltered(status, sort));
+        return ResponseEntity.ok(orderManagementService.getDashboardFiltered(sort, status));
     }
 
     // =========================================================
@@ -83,5 +83,12 @@ public class ProductionController {
     @GetMapping("/lines/overview")
     public ResponseEntity<List<LineResponse>> getLinesOverview() {
         return ResponseEntity.ok(productionService.getLineOverview());
+    }
+
+    @PostMapping("/storage/deliver")
+    public ResponseEntity<Void> markStorageDelivered(@RequestBody List<Long> stageIds ){
+
+         productionService.markStorageDelivered(stageIds);
+        return ResponseEntity.noContent().build();
     }
 }

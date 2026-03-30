@@ -8,5 +8,6 @@ import lombok.Data;
 public class OrderItemStatusResponse {
 
     private Long id;
-    private String status; 
+    private String status;
+    private String productType;
 }

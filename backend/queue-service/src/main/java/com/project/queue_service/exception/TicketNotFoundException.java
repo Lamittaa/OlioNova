@@ -8,6 +8,10 @@ public class TicketNotFoundException extends RuntimeException {
         super("Ticket not found with id: " + id);
     }
 
+    public TicketNotFoundException(String msg) {
+        super(msg);
+    }
+
     public String getErrorCode() {
         return errorCode;
     }

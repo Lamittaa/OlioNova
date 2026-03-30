@@ -31,13 +31,13 @@ import java.util.List;
 @Transactional
 public class OrderItemService {
 
-    private final OrderRepo         orderRepo;
-    private final OrderItemRepo     itemRepo;
+    private final OrderRepo orderRepo;
+    private final OrderItemRepo itemRepo;
     private final ProductLookupRepo productRepo;
-    private final CustomerClient    customerClient;
-    private final OrderStatusRepo   statusRepo;
-    private final OrderItemMapper   orderItemMapper;
-    private final OrderMapper       orderMapper;
+    private final CustomerClient customerClient;
+    private final OrderStatusRepo statusRepo;
+    private final OrderItemMapper orderItemMapper;
+    private final OrderMapper orderMapper;
 
     // =====================================================
     // GET ALL ITEMS
@@ -62,7 +62,7 @@ public class OrderItemService {
         OrderItem item = itemRepo.findByIdAndOrderId(itemId, orderId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Order item not found. orderId="
-                        + orderId + ", itemId=" + itemId));
+                                + orderId + ", itemId=" + itemId));
 
         return orderItemMapper.toResponse(item);
     }
@@ -71,7 +71,7 @@ public class OrderItemService {
     // ADD ITEM
     // =====================================================
     public OrderResponse addItem(Long orderId,
-                                  AddOrderItemRequest request) {
+                                 AddOrderItemRequest request) {
 
         Order order = orderRepo.findById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -83,7 +83,7 @@ public class OrderItemService {
                 productRepo.findById(request.getProductId())
                         .orElseThrow(() -> new ResourceNotFoundException(
                                 "Product not found with id: "
-                                + request.getProductId()));
+                                        + request.getProductId()));
 
         validateAddItemRules(order, product, request);
 
@@ -108,7 +108,7 @@ public class OrderItemService {
         item.setPrice(unitPrice);
         item.setTotalPrice(
                 unitPrice.multiply(item.getQuantity())
-                         .setScale(2, RoundingMode.HALF_UP));
+                        .setScale(2, RoundingMode.HALF_UP));
 
         item.setCreatedAt(LocalDateTime.now());
         item.setStatus(getStatusOrThrow("SUBMITTED"));
@@ -123,8 +123,8 @@ public class OrderItemService {
     // UPDATE ITEM
     // =====================================================
     public OrderResponse updateItem(Long orderId,
-                                     Long itemId,
-                                     UpdateOrderItemRequest request) {
+                                    Long itemId,
+                                    UpdateOrderItemRequest request) {
 
         Order order = orderRepo.findById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -135,7 +135,7 @@ public class OrderItemService {
         OrderItem item = itemRepo.findByIdAndOrderId(itemId, orderId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Order item not found. orderId="
-                        + orderId + ", itemId=" + itemId));
+                                + orderId + ", itemId=" + itemId));
 
         if (request.getQuantity() != null) {
 
@@ -156,10 +156,10 @@ public class OrderItemService {
                             || product.getInventory() < requested) {
                         throw new OutOfStockException(
                                 "Not enough stock for: "
-                                + product.getProductName()
-                                + ". Available: "
-                                + product.getInventory()
-                                + ", Requested: " + requested);
+                                        + product.getProductName()
+                                        + ". Available: "
+                                        + product.getInventory()
+                                        + ", Requested: " + requested);
                     }
                 }
             }
@@ -182,8 +182,8 @@ public class OrderItemService {
 
         item.setTotalPrice(
                 item.getPrice()
-                    .multiply(item.getQuantity())
-                    .setScale(2, RoundingMode.HALF_UP));
+                        .multiply(item.getQuantity())
+                        .setScale(2, RoundingMode.HALF_UP));
 
         item.setUpdatedAt(LocalDateTime.now());
 
@@ -207,7 +207,7 @@ public class OrderItemService {
         OrderItem item = itemRepo.findByIdAndOrderId(itemId, orderId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Order item not found. orderId="
-                        + orderId + ", itemId=" + itemId));
+                                + orderId + ", itemId=" + itemId));
 
         itemRepo.delete(item);
         recomputeOrderTotal(order);
@@ -217,7 +217,7 @@ public class OrderItemService {
     // UPDATE ORDER ITEM STATUS
     // =====================================================
     public void updateOrderItemStatus(Long orderItemId,
-                                       String newStatusName) {
+                                      String newStatusName) {
 
         OrderItem item = itemRepo.findById(orderItemId)
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -238,8 +238,8 @@ public class OrderItemService {
     // VALIDATE ADD ITEM RULES + STOCK CHECK
     // =====================================================
     private void validateAddItemRules(Order order,
-                                       ProductLookup product,
-                                       AddOrderItemRequest request) {
+                                      ProductLookup product,
+                                      AddOrderItemRequest request) {
 
         if ("PURCHASE".equalsIgnoreCase(product.getProductType())) {
 
@@ -267,7 +267,7 @@ public class OrderItemService {
                         || product.getInventory() <= 0) {
                     throw new OutOfStockException(
                             "Product out of stock: "
-                            + product.getProductName());
+                                    + product.getProductName());
                 }
 
                 int requested = request.getQuantity().intValue();
@@ -275,9 +275,9 @@ public class OrderItemService {
                 if (product.getInventory() < requested) {
                     throw new OutOfStockException(
                             "Not enough stock for: "
-                            + product.getProductName()
-                            + ". Available: " + product.getInventory()
-                            + ", Requested: " + requested);
+                                    + product.getProductName()
+                                    + ". Available: " + product.getInventory()
+                                    + ", Requested: " + requested);
                 }
             }
 
@@ -289,7 +289,7 @@ public class OrderItemService {
             if (exists) {
                 throw new BusinessRuleViolationException(
                         "Purchase product already exists in the order."
-                        + " Update quantity instead.");
+                                + " Update quantity instead.");
             }
 
             return;
@@ -311,17 +311,17 @@ public class OrderItemService {
                             .anyMatch(i ->
                                     ("SERVICE".equalsIgnoreCase(
                                             i.getProductType())
-                                     || "OLIVE".equalsIgnoreCase(
+                                            || "OLIVE".equalsIgnoreCase(
                                             i.getProductType()))
-                                    && i.getOliveType() != null
-                                    && i.getOliveType()
+                                            && i.getOliveType() != null
+                                            && i.getOliveType()
                                             .equalsIgnoreCase(
                                                     request.getOliveType()));
 
             if (sameOliveTypeExists) {
                 throw new BusinessRuleViolationException(
                         "Service item with same oliveType already exists."
-                        + " Update quantity instead.");
+                                + " Update quantity instead.");
             }
         }
     }
@@ -342,7 +342,7 @@ public class OrderItemService {
         if (!status.equals("SUBMITTED")) {
             throw new OrderNotEditableException(
                     "Order items cannot be modified in status: "
-                    + status);
+                            + status);
         }
     }
 
@@ -352,7 +352,7 @@ public class OrderItemService {
         if (!status.equals("SUBMITTED")) {
             throw new OrderNotEditableException(
                     "Order items can be deleted only in SUBMITTED status."
-                    + " Current: " + status);
+                            + " Current: " + status);
         }
     }
 
@@ -368,14 +368,14 @@ public class OrderItemService {
     }
 
     private BigDecimal computeFinalPrice(ProductLookup product,
-                                          boolean isMember) {
+                                         boolean isMember) {
         BigDecimal base = product.getPrice();
 
         if (isMember && product.getMemberDiscount() != null) {
             BigDecimal factor = BigDecimal.ONE.subtract(
                     product.getMemberDiscount());
             return base.multiply(factor)
-                       .setScale(2, RoundingMode.HALF_UP);
+                    .setScale(2, RoundingMode.HALF_UP);
         }
 
         return base.setScale(2, RoundingMode.HALF_UP);
@@ -402,25 +402,28 @@ public class OrderItemService {
     }
 
     private void validateItemTransition(OrderItem item,
-                                         String nextStatus) {
+                                        String nextStatus) {
         String current = item.getStatus()
                 .getStatusName().toUpperCase();
         String next = nextStatus.toUpperCase();
         String type = item.getProductType().toUpperCase();
 
+        if (current.equalsIgnoreCase(next)) return;
+
         if (type.equals("PURCHASE")) {
-            if (current.equals("PAID") && next.equals("REFUNDED"))  return;
+            if (current.equals("PAID") && next.equals("REFUNDED")) return;
             if (current.equals("PAID") && next.equals("COMPLETED")) return;
             throw new BusinessRuleViolationException(
                     "Invalid status change for PURCHASE item");
         }
 
         if (type.equals("SERVICE")) {
-            if (current.equals("PAID")             && next.equals("REFUNDED"))         return;
-            if (current.equals("PAID")             && next.equals("IN_PRODUCTION"))    return;
-            if (current.equals("IN_PRODUCTION")    && next.equals("IN_PROGRESS"))      return;
-            if (current.equals("IN_PROGRESS")      && next.equals("READY_FOR_PICKUP")) return;
-            if (current.equals("READY_FOR_PICKUP") && next.equals("COMPLETED"))        return;
+            if (current.equals("PAID") && next.equals("REFUNDED")) return;
+            if (current.equals("PAID") && next.equals("IN_PROGRESS")) return;
+            if (current.equals("PAID") && next.equals("IN_PRODUCTION")) return;
+            if (current.equals("IN_PRODUCTION") && next.equals("IN_PROGRESS")) return;
+            if (current.equals("IN_PROGRESS") && next.equals("READY_FOR_PICKUP")) return;
+            if (current.equals("READY_FOR_PICKUP") && next.equals("COMPLETED")) return;
             throw new BusinessRuleViolationException(
                     "Invalid status change for SERVICE item");
         }
@@ -429,60 +432,79 @@ public class OrderItemService {
     private void recalculateOrderStatus(Long orderId) {
 
         Order order = orderRepo.findById(orderId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Order not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
 
         List<OrderItem> items = itemRepo.findByOrderId(orderId);
 
-        if (items.isEmpty()) return;
+        if (items.isEmpty()) {
+            order.setStatus(getStatusOrThrow("SUBMITTED"));
+            order.setUpdatedAt(LocalDateTime.now());
+            orderRepo.save(order);
+            return;
+        }
 
-        long total = items.size();
+        int total = items.size();
 
-        long refundedCount = items.stream()
-                .filter(i -> i.getStatus().getStatusName()
-                        .equalsIgnoreCase("REFUNDED"))
-                .count();
+        int refundedCount = 0;
+        int completedCount = 0;
 
-        long completedCount = items.stream()
-                .filter(i -> i.getStatus().getStatusName()
-                        .equalsIgnoreCase("COMPLETED"))
-                .count();
+        boolean anyInProgress = false;
+        boolean anyInProduction = false;
 
-        boolean anyInProgress = items.stream()
-                .anyMatch(i -> i.getStatus().getStatusName()
-                        .equalsIgnoreCase("IN_PROGRESS"));
+        boolean allPaid = true;
 
-        boolean anyInProduction = items.stream()
-                .anyMatch(i -> i.getStatus().getStatusName()
-                        .equalsIgnoreCase("IN_PRODUCTION"));
+        boolean hasServiceItems = false;
+        boolean allServiceReady = true;
 
-        boolean allReadyForPickup = items.stream()
-                .filter(i -> i.getProductType()
-                        .equalsIgnoreCase("SERVICE"))
-                .allMatch(i -> i.getStatus().getStatusName()
-                        .equalsIgnoreCase("READY_FOR_PICKUP"));
+        for (OrderItem i : items) {
+            String status = i.getStatus().getStatusName();
 
-        boolean allPaid = items.stream()
-                .allMatch(i -> i.getStatus().getStatusName()
-                        .equalsIgnoreCase("PAID"));
+            // counts
+            if ("REFUNDED".equalsIgnoreCase(status)) refundedCount++;
+            if ("COMPLETED".equalsIgnoreCase(status)) completedCount++;
 
-        if      (refundedCount  == total) order.setStatus(getStatusOrThrow("REFUNDED"));
-        else if (anyInProgress)           order.setStatus(getStatusOrThrow("IN_PROGRESS"));
-        else if (anyInProduction)         order.setStatus(getStatusOrThrow("IN_PRODUCTION"));
-        else if (allReadyForPickup)       order.setStatus(getStatusOrThrow("READY_FOR_PICKUP"));
-        else if (completedCount == total) order.setStatus(getStatusOrThrow("COMPLETED"));
-        else if (allPaid)                 order.setStatus(getStatusOrThrow("PAID"));
-        else                              order.setStatus(getStatusOrThrow("SUBMITTED"));
+            // dominant states
+            if ("IN_PROGRESS".equalsIgnoreCase(status)) anyInProgress = true;
+            if ("IN_PRODUCTION".equalsIgnoreCase(status)) anyInProduction = true;
+
+            // all conditions
+            if (!"PAID".equalsIgnoreCase(status)) allPaid = false;
+
+            // service logic
+            if ("SERVICE".equalsIgnoreCase(i.getProductType())) {
+                hasServiceItems = true;
+                if (!"READY_FOR_PICKUP".equalsIgnoreCase(status)) {
+                    allServiceReady = false;
+                }
+            }
+        }
+
+        // priority resolution
+        if (refundedCount == total) {
+            order.setStatus(getStatusOrThrow("REFUNDED"));
+        } else if (anyInProgress) {
+            order.setStatus(getStatusOrThrow("IN_PROGRESS"));
+        } else if (anyInProduction) {
+            order.setStatus(getStatusOrThrow("IN_PRODUCTION"));
+        } else if (hasServiceItems && allServiceReady) {
+            order.setStatus(getStatusOrThrow("READY_FOR_PICKUP"));
+        } else if (completedCount == total) {
+            order.setStatus(getStatusOrThrow("COMPLETED"));
+        } else if (allPaid) {
+            order.setStatus(getStatusOrThrow("PAID"));
+        } else {
+            order.setStatus(getStatusOrThrow("SUBMITTED"));
+        }
 
         order.setUpdatedAt(LocalDateTime.now());
         orderRepo.save(order);
     }
 
-public List<OrderItemBulkResponse> getItemsByIds(List<Long> ids) {
+    public List<OrderItemBulkResponse> getItemsByIds(List<Long> ids) {
 
-    return itemRepo.findAllByIdIn(ids)
-            .stream()
-            .map(orderItemMapper::toBulkResponse)
-            .toList();
-}
+        return itemRepo.findAllByIdIn(ids)
+                .stream()
+                .map(orderItemMapper::toBulkResponse)
+                .toList();
+    }
 }
