@@ -2,6 +2,7 @@ package com.project.order.service;
 
 import com.project.order.client.CustomerClient;
 import com.project.order.dto.AddOrderItemRequest;
+import com.project.order.dto.FulfillResponse;
 import com.project.order.dto.OrderItemBulkResponse;
 import com.project.order.dto.OrderItemResponse;
 import com.project.order.dto.OrderResponse;
@@ -137,36 +138,32 @@ public class OrderItemService {
                         "Order item not found. orderId="
                         + orderId + ", itemId=" + itemId));
 
-        if (request.getQuantity() != null) {
+    if (request.getQuantity() != null) {
 
-            // ✅ تحقق من المخزون فقط للـ PIECE عند التحديث
-            if ("PURCHASE".equalsIgnoreCase(item.getProductType())) {
+    if ("PURCHASE".equalsIgnoreCase(item.getProductType())) {
 
-                ProductLookup product =
-                        productRepo.findById(item.getProductId())
-                                .orElseThrow(() ->
-                                        new ResourceNotFoundException(
-                                                "Product not found"));
+        ProductLookup product =
+                productRepo.findById(item.getProductId())
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException(
+                                        "Product not found"));
 
-                if ("PIECE".equalsIgnoreCase(product.getUnit())) {
+        int requested = request.getQuantity().intValue();
 
-                    int requested = request.getQuantity().intValue();
-
-                    if (product.getInventory() == null
-                            || product.getInventory() < requested) {
-                        throw new OutOfStockException(
-                                "Not enough stock for: "
-                                + product.getProductName()
-                                + ". Available: "
-                                + product.getInventory()
-                                + ", Requested: " + requested);
-                    }
-                }
-            }
-
-            validateQuantity(request.getQuantity());
-            item.setQuantity(request.getQuantity());
+        if (product.getInventoryAvailabilityQuantity() == null
+                || product.getInventoryAvailabilityQuantity() < requested) {
+            throw new OutOfStockException(
+                    "Not enough stock for: "
+                    + product.getProductName()
+                    + ". Available: "
+                    + product.getInventoryAvailabilityQuantity()
+                    + ", Requested: " + requested);
         }
+    }
+
+    validateQuantity(request.getQuantity());
+    item.setQuantity(request.getQuantity());
+}
 
         if (request.getOliveType() != null) {
             item.setOliveType(request.getOliveType());
@@ -234,97 +231,91 @@ public class OrderItemService {
         recalculateOrderStatus(item.getOrder().getId());
     }
 
-    // =====================================================
-    // VALIDATE ADD ITEM RULES + STOCK CHECK
-    // =====================================================
-    private void validateAddItemRules(Order order,
-                                       ProductLookup product,
-                                       AddOrderItemRequest request) {
+private void validateAddItemRules(Order order,
+                                   ProductLookup product,
+                                   AddOrderItemRequest request) {
 
-        if ("PURCHASE".equalsIgnoreCase(product.getProductType())) {
+    if ("PURCHASE".equalsIgnoreCase(product.getProductType())) {
 
-            if (request.getNote() != null
-                    && !request.getNote().isBlank()) {
-                throw new BusinessRuleViolationException(
-                        "Note is not allowed for purchase items");
-            }
-
-            if (request.getQuantity().scale() > 0) {
-                throw new BusinessRuleViolationException(
-                        "Quantity for purchase items must be an integer");
-            }
-
-            if (request.getQuantity()
-                    .compareTo(BigDecimal.ONE) < 0) {
-                throw new BusinessRuleViolationException(
-                        "Quantity must be at least 1");
-            }
-
-            // ✅ inventory فقط للـ PIECE
-            if ("PIECE".equalsIgnoreCase(product.getUnit())) {
-
-                if (product.getInventory() == null
-                        || product.getInventory() <= 0) {
-                    throw new OutOfStockException(
-                            "Product out of stock: "
-                            + product.getProductName());
-                }
-
-                int requested = request.getQuantity().intValue();
-
-                if (product.getInventory() < requested) {
-                    throw new OutOfStockException(
-                            "Not enough stock for: "
-                            + product.getProductName()
-                            + ". Available: " + product.getInventory()
-                            + ", Requested: " + requested);
-                }
-            }
-
-            boolean exists = itemRepo.findByOrderId(order.getId())
-                    .stream()
-                    .anyMatch(i -> i.getProductId()
-                            .equals(product.getId()));
-
-            if (exists) {
-                throw new BusinessRuleViolationException(
-                        "Purchase product already exists in the order."
-                        + " Update quantity instead.");
-            }
-
-            return;
+        if (request.getNote() != null
+                && !request.getNote().isBlank()) {
+            throw new BusinessRuleViolationException(
+                    "Note is not allowed for purchase items");
         }
 
-        // SERVICE
-        if ("SERVICE".equalsIgnoreCase(product.getProductType())
-                || "OLIVE".equalsIgnoreCase(product.getProductType())) {
+        if (request.getQuantity().scale() > 0) {
+            throw new BusinessRuleViolationException(
+                    "Quantity for purchase items must be an integer");
+        }
 
-            if (request.getOliveType() == null
-                    || request.getBagsCount() == null) {
-                throw new BusinessRuleViolationException(
-                        "Service item requires oliveType and bagsCount");
-            }
+        if (request.getQuantity()
+                .compareTo(BigDecimal.ONE) < 0) {
+            throw new BusinessRuleViolationException(
+                    "Quantity must be at least 1");
+        }
 
-            boolean sameOliveTypeExists =
-                    itemRepo.findByOrderId(order.getId())
-                            .stream()
-                            .anyMatch(i ->
-                                    ("SERVICE".equalsIgnoreCase(
-                                            i.getProductType())
-                                     || "OLIVE".equalsIgnoreCase(
-                                            i.getProductType()))
-                                    && i.getOliveType() != null
-                                    && i.getOliveType()
-                                            .equalsIgnoreCase(
-                                                    request.getOliveType()));
+        // ✅ شيك على المخزون لكل PURCHASE
+        if (product.getInventoryAvailabilityQuantity() == null
+                || product.getInventoryAvailabilityQuantity() <= 0) {
+            throw new OutOfStockException(
+                    "Product out of stock: "
+                    + product.getProductName());
+        }
 
-            if (sameOliveTypeExists) {
-                throw new BusinessRuleViolationException(
-                        "Service item with same oliveType already exists."
-                        + " Update quantity instead.");
-            }
+        int requested = request.getQuantity().intValue();
+
+        if (product.getInventoryAvailabilityQuantity() < requested) {
+            throw new OutOfStockException(
+                    "Not enough stock for: "
+                    + product.getProductName()
+                    + ". Available: " + product.getInventoryAvailabilityQuantity()
+                    + ", Requested: " + requested);
+        }
+
+        boolean exists = itemRepo.findByOrderId(order.getId())
+                .stream()
+                .anyMatch(i -> i.getProductId()
+                        .equals(product.getId()));
+
+        if (exists) {
+            throw new BusinessRuleViolationException(
+                    "Purchase product already exists in the order."
+                    + " Update quantity instead.");
+        }
+
+        return;
+    }
+
+    // SERVICE
+    if ("SERVICE".equalsIgnoreCase(product.getProductType())
+            || "OLIVE".equalsIgnoreCase(product.getProductType())) {
+
+        if (request.getOliveType() == null
+                || request.getBagsCount() == null) {
+            throw new BusinessRuleViolationException(
+                    "Service item requires oliveType and bagsCount");
+        }
+
+        boolean sameOliveTypeExists =
+                itemRepo.findByOrderId(order.getId())
+                        .stream()
+                        .anyMatch(i ->
+                                ("SERVICE".equalsIgnoreCase(
+                                        i.getProductType())
+                                 || "OLIVE".equalsIgnoreCase(
+                                        i.getProductType()))
+                                && i.getOliveType() != null
+                                && i.getOliveType()
+                                        .equalsIgnoreCase(
+                                                request.getOliveType()));
+
+        if (sameOliveTypeExists) {
+            throw new BusinessRuleViolationException(
+                    "Service item with same oliveType already exists."
+                    + " Update quantity instead.");
         }
     }
+}
 
     // =====================================================
     // HELPERS
@@ -483,6 +474,74 @@ public List<OrderItemBulkResponse> getItemsByIds(List<Long> ids) {
     return itemRepo.findAllByIdIn(ids)
             .stream()
             .map(orderItemMapper::toBulkResponse)
+            .toList();
+}
+// =====================================================
+// FULFILL ITEM — استلام الشراء
+// =====================================================
+public FulfillResponse fulfillItem(Long orderId, Long itemId) {
+
+    Order order = orderRepo.findById(orderId)
+            .orElseThrow(() -> new ResourceNotFoundException(
+                    "Order not found with id: " + orderId));
+
+    OrderItem item = itemRepo.findByIdAndOrderId(itemId, orderId)
+            .orElseThrow(() -> new ResourceNotFoundException(
+                    "Order item not found. orderId="
+                    + orderId + ", itemId=" + itemId));
+
+    if (!"PURCHASE".equalsIgnoreCase(item.getProductType())) {
+        throw new BusinessRuleViolationException(
+                "Only PURCHASE items can be fulfilled");
+    }
+
+    if (!"PAID".equalsIgnoreCase(item.getStatus().getStatusName())) {
+        throw new BusinessRuleViolationException(
+                "Item must be in PAID status to fulfill. Current: "
+                + item.getStatus().getStatusName());
+    }
+
+    ProductLookup product = productRepo.findById(item.getProductId())
+            .orElseThrow(() -> new ResourceNotFoundException(
+                    "Product not found"));
+
+    // ✅ ينقص من التوتال
+    int qty = item.getQuantity().intValue();
+
+    if (product.getInventoryTotalQuantity() == null
+            || product.getInventoryTotalQuantity() < qty) {
+        throw new OutOfStockException(
+                "Not enough total stock to fulfill: "
+                + product.getProductName()
+                + ". Total: " + product.getInventoryTotalQuantity()
+                + ", Requested: " + qty);
+    }
+
+    product.setInventoryTotalQuantity(
+            product.getInventoryTotalQuantity() - qty);
+    productRepo.save(product);
+
+    item.setStatus(getStatusOrThrow("COMPLETED"));
+    item.setUpdatedAt(LocalDateTime.now());
+    itemRepo.save(item);
+
+    recalculateOrderStatus(orderId);
+
+    FulfillResponse response = new FulfillResponse();
+    response.setOrderId(orderId);
+    response.setItemId(itemId);
+    response.setProductName(item.getProductName());
+    response.setProductType(item.getProductType());
+    response.setQuantity(item.getQuantity().intValue());
+    response.setStatus(item.getStatus().getStatusName());
+
+    return response;
+}
+
+public List<String> getPossibleStatuses() {
+    return statusRepo.findAll()
+            .stream()
+            .map(OrderStatus::getStatusName)
             .toList();
 }
 }

@@ -26,8 +26,12 @@ public interface ProductMapper {
             entity.setProductType(dto.getProductType());
         }
 
-        if (dto.getInventory() != null) {
-            entity.setInventory(dto.getInventory());
+        if (dto.getInventoryTotalQuantity() != null) {
+            entity.setInventoryTotalQuantity(dto.getInventoryTotalQuantity());
+        }
+
+        if (dto.getInventoryAvailabilityQuantity() != null) {
+            entity.setInventoryAvailabilityQuantity(dto.getInventoryAvailabilityQuantity());
         }
 
         if (dto.getPrice() != null) {

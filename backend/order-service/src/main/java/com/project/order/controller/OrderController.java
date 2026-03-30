@@ -83,4 +83,12 @@ public class OrderController {
                         @RequestBody List<Long> ids) {
                 return ResponseEntity.ok(dashboardService.getOrdersByIds(ids));
         }
+
+        @PostMapping("/{id}/pay")
+@PreAuthorize("hasRole('ADMIN') ")
+public ResponseEntity<Void> payOrder(
+        @PathVariable @Min(1) Long id) {
+    orderService.payOrder(id);
+    return ResponseEntity.noContent().build();
+}
 }

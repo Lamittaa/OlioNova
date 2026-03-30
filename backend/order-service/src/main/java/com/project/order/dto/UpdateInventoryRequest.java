@@ -9,7 +9,9 @@ import lombok.Setter;
 @Setter
 public class UpdateInventoryRequest {
 
-    @NotNull(message = "Inventory cannot be null")
-    @Min(value = 0, message = "Inventory cannot be negative")
-    private Integer inventory;
+    @NotNull(message = "Inventory total quantity cannot be null")
+    @Min(value = 0, message = "Inventory total quantity cannot be negative")
+    private Integer inventoryTotalQuantity;
+
+    
 }
