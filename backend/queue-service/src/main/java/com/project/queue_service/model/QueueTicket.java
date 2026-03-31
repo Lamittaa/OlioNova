@@ -30,6 +30,8 @@ public class QueueTicket {
     @Column(nullable = false)
     private Integer ticketNumber;
     private TicketStatus ticketStatus;
+    @Column(name = "missed_at")
+    private LocalDateTime missedAt;
     private Long userId;
     private LocalDateTime createdAt;
     private LocalDateTime calledAt;
