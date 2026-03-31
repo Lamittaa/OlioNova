@@ -25,25 +25,28 @@ public class ProductLookupService {
     private final ProductLookupRepo productRepo;
     private final ProductMapper productMapper;
 
-    public ProductResponse createProduct(CreateProductRequest request) {
-        String name = request.getProductName().trim();
+   public ProductResponse createProduct(CreateProductRequest request) {
 
-        if (productRepo.existsByProductNameIgnoreCase(name)) {
-            throw new EntityAlreadyExistsException(
-                    "Product already exists with name: " + name + " (If it was deactivated, activate it instead)");
-        }
+    String name = request.getProductName().trim();
 
-        ProductLookup product = productMapper.toEntity(request);
-
-        product.setProductName(name);
-        product.setProductType("Purchase");
-        product.setUnit(request.getUnit().trim().toUpperCase());
-        product.setActive(true);
-
-        ProductLookup saved = productRepo.save(product);
-        return productMapper.toProductResponse(saved);
+    if (productRepo.existsByProductNameIgnoreCase(name)) {
+        throw new EntityAlreadyExistsException(
+                "Product already exists with name: " + name + " (If it was deactivated, activate it instead)");
     }
 
+    ProductLookup product = productMapper.toEntity(request);
+
+    product.setProductName(name);
+    product.setProductType("PURCHASE");
+    product.setUnit(request.getUnit().trim().toUpperCase());
+    product.setActive(true);
+
+    product.setInventoryTotalQuantity(request.getInventoryTotalQuantity());
+    product.setInventoryAvailabilityQuantity(request.getInventoryTotalQuantity());
+
+    ProductLookup saved = productRepo.save(product);
+    return productMapper.toProductResponse(saved);
+}
     @Transactional(readOnly = true)
     public ProductResponse getProductById(Long id) {
         ProductLookup product = productRepo.findByIdAndActiveTrue(id)
@@ -61,25 +64,60 @@ public class ProductLookupService {
     }
 
     public ProductResponse updateProduct(Long id, UpdateProductRequest request) {
-        ProductLookup product = productRepo.findByIdAndActiveTrue(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
+
+    ProductLookup product = productRepo.findByIdAndActiveTrue(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
+
+    // 🟢 الاسم (اختياري)
+    if (request.getProductName() != null && !request.getProductName().isBlank()) {
 
         String newName = request.getProductName().trim();
         String currentName = product.getProductName() == null ? "" : product.getProductName().trim();
 
-        if (!newName.equalsIgnoreCase(currentName) && productRepo.existsByProductNameIgnoreCase(newName)) {
-            throw new EntityAlreadyExistsException("Product already exists with name: " + newName);
+        if (!newName.equalsIgnoreCase(currentName)
+                && productRepo.existsByProductNameIgnoreCase(newName)) {
+            throw new EntityAlreadyExistsException(
+                    "Product already exists with name: " + newName);
         }
 
-        productMapper.updateProductFromDto(request, product);
-
         product.setProductName(newName);
-        product.setProductType(request.getProductType().trim().toUpperCase());
-        product.setUnit(request.getUnit().trim().toUpperCase());
-
-        ProductLookup saved = productRepo.save(product);
-        return productMapper.toProductResponse(saved);
     }
+
+    // 🟢 السعر
+    if (request.getPrice() != null) {
+        product.setPrice(request.getPrice());
+    }
+
+    // 🟢 الوحدة
+    if (request.getUnit() != null && !request.getUnit().isBlank()) {
+        product.setUnit(request.getUnit().trim().toUpperCase());
+    }
+
+  if ("PURCHASE".equalsIgnoreCase(product.getProductType())
+        && request.getInventoryTotalQuantity() != null) {
+
+    int oldTotal = product.getInventoryTotalQuantity() == null ? 0 : product.getInventoryTotalQuantity();
+    int oldAvailable = product.getInventoryAvailabilityQuantity() == null ? 0 : product.getInventoryAvailabilityQuantity();
+
+    int newTotal = request.getInventoryTotalQuantity();
+
+    int difference = newTotal - oldTotal;
+
+    if (oldAvailable + difference < 0) {
+        throw new BusinessRuleViolationException(
+            "Cannot reduce total inventory below already reserved quantity");
+    }
+
+    product.setInventoryTotalQuantity(newTotal);
+    product.setInventoryAvailabilityQuantity(oldAvailable + difference);
+
+}
+
+  
+
+    ProductLookup saved = productRepo.save(product);
+    return productMapper.toProductResponse(saved);
+}
 
     public ProductResponse updateInventory(Long id, UpdateInventoryRequest request) {
     ProductLookup product = productRepo.findByIdAndActiveTrue(id)

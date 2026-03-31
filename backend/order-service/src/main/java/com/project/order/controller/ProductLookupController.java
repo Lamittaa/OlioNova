@@ -28,7 +28,6 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/products")
@@ -43,102 +42,35 @@ public class ProductLookupController {
 
     private final ProductLookupService productService;
 
-    @PostMapping
-    @PreAuthorize("hasRole('ADMIN') and hasAuthority('PRODUCT_CREATE')")
-    @Operation(summary = "Create a new product")
-    @ApiResponses({
-            @ApiResponse(
-                    responseCode = "201",
-                    description = "Product created successfully",
-                    content = @Content(
-                            schema = @Schema(implementation = ProductResponse.class),
-                            examples = @ExampleObject(
-                                    name = "Created product",
-                                    value = """
-                                    {
-                                      "id": 12,
-                                      "productName": "Olive Pressing",
-                                      "productType": "JIFT",
-                                      "inventory": 0,
-                                      "price": 0.60,
-                                      "unit": "KG"
-                                    }
-                                    """
-                            )
-                    )
-            ),
-            @ApiResponse(
-                    responseCode = "400",
-                    description = "Validation error",
-                    content = @Content(
-                            schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(
-                                    name = "Invalid productType/unit",
-                                    value = """
-                                    {
-                                      "timestamp": "2026-01-16T01:00:00Z",
-                                      "status": 400,
-                                      "error": "Bad Request",
-                                      "message": "Validation failed",
-                                      "path": "/api/products",
-                                      "code": "VALIDATION_ERROR",
-                                      "errors": [
-                                        { "field": "productType", "message": "Product type must be one of: OLIVE, JIFT, GALLON", "rejectedValue": "jeft" }
-                                      ]
-                                    }
-                                    """
-                            )
-                    )
-            ),
-            @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "403", description = "Forbidden"),
-            @ApiResponse(
-                    responseCode = "409",
-                    description = "Duplicate product name",
-                    content = @Content(
-                            schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(
-                                    name = "Duplicate name",
-                                    value = """
-                                    {
-                                      "timestamp": "2026-01-16T01:00:00Z",
-                                      "status": 409,
-                                      "error": "Conflict",
-                                      "message": "Product already exists with name: Olive Pressing (If it was deactivated, activate it instead)",
-                                      "path": "/api/products",
-                                      "code": "ENTITY_ALREADY_EXISTS"
-                                    }
-                                    """
-                            )
-                    )
-            )
-    })
-    public ResponseEntity<ProductResponse> createProduct(
-            @Valid
-            @RequestBody
-            @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    required = true,
-                    content = @Content(
-                            schema = @Schema(implementation = CreateProductRequest.class),
-                            examples = @ExampleObject(
-                                    name = "Create product request (case-insensitive)",
-                                    value = """
-                                    {
-                                      "productName": "Olive Pressing",
-                                      "productType": "jift",
-                                      "inventory": 0,
-                                      "price": 0.60,
-                                      "unit": "kg"
-                                    }
-                                    """
-                            )
-                    )
-            )
-            CreateProductRequest request
-    ) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(productService.createProduct(request));
-    }
-
+   
+@PostMapping
+@PreAuthorize("hasAnyRole('ADMIN')")
+public ResponseEntity<ProductResponse> createProduct(
+        @Valid
+        @RequestBody
+        @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                required = true,
+                content = @Content(
+                        schema = @Schema(implementation = CreateProductRequest.class),
+                        examples = @ExampleObject(
+                                name = "Create product request",
+                                value = """
+                                {
+                                  "productName": "Olive Oil Bottle",
+                                  "inventoryTotalQuantity": 100,
+                                  "price": 0.60,
+                                  "unit": "kg"
+                                }
+                                """
+                        )
+                )
+        )
+        CreateProductRequest request
+) {
+    return ResponseEntity
+            .status(HttpStatus.CREATED)
+            .body(productService.createProduct(request));
+}
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTIONIST','ACCOUNTANT') and hasAuthority('PRODUCT_READ')")
     @Operation(summary = "Get product by ID (active only)")
@@ -215,47 +147,34 @@ public class ProductLookupController {
         return ResponseEntity.ok(productService.getAllProducts());
     }
 
+
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN') and hasAuthority('PRODUCT_UPDATE')")
-    @Operation(summary = "Update a product (active only)")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Product updated successfully",
-                    content = @Content(schema = @Schema(implementation = ProductResponse.class))),
-            @ApiResponse(responseCode = "400", description = "Validation error",
-                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
-            @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "403", description = "Forbidden"),
-            @ApiResponse(responseCode = "404", description = "Not found (missing or deactivated)",
-                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
-            @ApiResponse(responseCode = "409", description = "Duplicate product name",
-                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
-    })
-    public ResponseEntity<ProductResponse> updateProduct(
-            @PathVariable @Min(value = 1, message = "Product ID must be greater than 0") Long id,
-            @Valid
-            @RequestBody
-            @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    required = true,
-                    content = @Content(
-                            schema = @Schema(implementation = UpdateProductRequest.class),
-                            examples = @ExampleObject(
-                                    name = "Update product request",
-                                    value = """
-                                    {
-                                      "productName": "Jift Bag",
-                                      "productType": "JIFT",
-                                      "inventory": 100,
-                                      "price": 1.10,
-                                      "unit": "pcs"
-                                    }
-                                    """
-                            )
-                    )
-            )
-            UpdateProductRequest request
-    ) {
-        return ResponseEntity.ok(productService.updateProduct(id, request));
-    }
+@PreAuthorize("hasRole('ADMIN') and hasAuthority('PRODUCT_UPDATE')")
+public ResponseEntity<ProductResponse> updateProduct(
+        @PathVariable @Min(value = 1, message = "Product ID must be greater than 0") Long id,
+        @Valid
+        @RequestBody
+        @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                required = true,
+                content = @Content(
+                        schema = @Schema(implementation = UpdateProductRequest.class),
+                        examples = @ExampleObject(
+                                name = "Update product request",
+                                value = """
+                                {
+                                  "productName": "Jift Bag",
+                                  "inventoryTotalQuantity": 100,
+                                  "price": 1.10,
+                                  "unit": "pcs"
+                                }
+                                """
+                        )
+                )
+        )
+        UpdateProductRequest request
+) {
+    return ResponseEntity.ok(productService.updateProduct(id, request));
+}
 
     @PatchMapping("/{id}/inventory")
     @PreAuthorize("hasAnyRole('ADMIN','ACCOUNTANT') and hasAuthority('PRODUCT_UPDATE_INVENTORY')")
