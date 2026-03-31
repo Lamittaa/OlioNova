@@ -148,4 +148,104 @@ public class EmailService {
 
         }
     }
+
+     public void sendOtpEmail(String to, String username, String otpCode) {
+        try {
+            log.info("📧 Preparing OTP email for {}", to);
+
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setTo(to);
+            helper.setSubject("رمز إعادة تعيين كلمة المرور");
+
+            String html = """
+                    <html dir="rtl" lang="ar">
+                    <head>
+                        <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+                    </head>
+                    <body style="
+                        font-family:'Tajawal', Arial;
+                        background-color:#f4f6f8;
+                        padding:20px;
+                        direction:rtl;
+                        text-align:right;
+                    ">
+                        <div style="
+                            max-width:600px;
+                            margin:auto;
+                            background:white;
+                            border-radius:10px;
+                            padding:30px;
+                            box-shadow:0 4px 12px rgba(0,0,0,0.1);
+                        ">
+                            <div style="text-align:center;margin-bottom:20px;">
+                                <img src="cid:logoImage" width="120"/>
+                            </div>
+
+                            <h2 style="color:#2e7d32;text-align:center;">
+                                إعادة تعيين كلمة المرور
+                            </h2>
+
+                            <p style="color:#555;font-size:15px;">
+                                مرحباً %s، تلقينا طلباً لإعادة تعيين كلمة المرور الخاصة بك.
+                            </p>
+
+                            <div style="
+                                background:#f1f5f9;
+                                padding:20px;
+                                border-radius:8px;
+                                margin-top:20px;
+                                text-align:center;
+                            ">
+                                <p style="color:#555;font-size:14px;margin-bottom:10px;">
+                                    رمز التحقق الخاص بك:
+                                </p>
+                                <div style="
+                                    font-size:36px;
+                                    font-weight:700;
+                                    letter-spacing:10px;
+                                    color:#2e7d32;
+                                    direction:ltr;
+                                ">
+                                    %s
+                                </div>
+                                <p style="color:#e53935;font-size:13px;margin-top:10px;">
+                                    صالح لمدة 10 دقائق فقط
+                                </p>
+                            </div>
+
+                            <p style="margin-top:20px;color:#666;font-size:14px;">
+                                إذا لم تطلب إعادة تعيين كلمة المرور، تجاهل هذه الرسالة.
+                            </p>
+
+                            <div style="
+                                margin-top:30px;
+                                padding-top:10px;
+                                border-top:1px solid #eee;
+                                font-size:13px;
+                                color:#888;
+                                text-align:center;
+                            ">
+                                مع تحيات <br>
+                                النظام الذكي لمعصرة الجمعية التعاونية – بيت جالا
+                            </div>
+                        </div>
+                    </body>
+                    </html>
+                    """.formatted(username, otpCode);
+
+            helper.setText(html, true);
+
+            ClassPathResource logo = new ClassPathResource("static/logo.jpeg");
+            helper.addInline("logoImage", logo);
+
+            mailSender.send(message);
+
+            log.info("✅ OTP email sent successfully to {}", to);
+
+        } catch (Exception e) {
+            log.error("❌ Failed to send OTP email", e);
+        }
+    }
 }

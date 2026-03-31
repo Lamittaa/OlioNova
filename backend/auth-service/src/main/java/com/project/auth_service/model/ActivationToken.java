@@ -1,4 +1,3 @@
-
 package com.project.auth_service.model;
 
 import jakarta.persistence.*;
@@ -30,4 +29,15 @@ public class ActivationToken {
 
     @Column(nullable = false)
     private Instant expiresAt;
+
+    // OTP fields
+    @Column(length = 6)
+    private String otpCode;
+
+    @Column
+    private Instant otpExpiresAt;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean otpVerified = false;
 }

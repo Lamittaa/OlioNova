@@ -184,4 +184,15 @@ public class GlobalExceptionHandler {
         return new FieldErrorDto(fe.getField(), fe.getDefaultMessage(), fe.getRejectedValue());
     }
 
+    @ExceptionHandler(OtpInvalidException.class)
+public ResponseEntity<ErrorResponseDto> handleOtpInvalid(OtpInvalidException ex, HttpServletRequest req) {
+    log.warn("Invalid OTP attempt: {}", ex.getMessage());
+    return build(HttpStatus.BAD_REQUEST, ex.getMessage(), req, "OTP_INVALID", null);
+}
+
+@ExceptionHandler(OtpExpiredException.class)
+public ResponseEntity<ErrorResponseDto> handleOtpExpired(OtpExpiredException ex, HttpServletRequest req) {
+    log.warn("Expired OTP attempt: {}", ex.getMessage());
+    return build(HttpStatus.BAD_REQUEST, ex.getMessage(), req, "OTP_EXPIRED", null);
+}
 }

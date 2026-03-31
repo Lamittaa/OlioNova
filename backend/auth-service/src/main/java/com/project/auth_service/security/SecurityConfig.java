@@ -48,11 +48,16 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authenticationProvider(daoAuthProvider())
-            .authorizeHttpRequests(auth -> auth
+      .authorizeHttpRequests(auth -> auth
     .requestMatchers(org.springframework.http.HttpMethod.POST,
-                      "/api/auth/login", "/api/auth/set-password", "/api/auth/refresh").permitAll()
+            "/api/auth/login",
+            "/api/auth/refresh",
+            "/api/set-password",
+            "/api/auth/forgot-password",   
+            "/api/auth/verify-otp"         
+    ).permitAll()
     .requestMatchers(org.springframework.http.HttpMethod.GET,
-                      "/api/auth/set-password").permitAll()  
+            "/api/auth/set-password").permitAll()
     .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
     .requestMatchers(org.springframework.http.HttpMethod.GET, "/actuator/health").permitAll()
     .anyRequest().authenticated()

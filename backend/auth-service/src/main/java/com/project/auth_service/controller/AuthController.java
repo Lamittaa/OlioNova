@@ -52,4 +52,15 @@ public class AuthController {
         authService.setPassword(req);
     }
 
+    @PostMapping("/auth/forgot-password")
+    public ResponseEntity<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequest req) {
+        authService.forgotPassword(req.getUsernameOrEmail());
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/auth/verify-otp")
+    public ResponseEntity<VerifyOtpResponse> verifyOtp(@Valid @RequestBody VerifyOtpRequest req) {
+        String token = authService.verifyOtp(req.getUsernameOrEmail(), req.getOtp());
+        return ResponseEntity.ok(new VerifyOtpResponse(token));
+    }
 }
