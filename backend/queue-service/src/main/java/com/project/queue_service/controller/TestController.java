@@ -7,7 +7,7 @@ import org.springframework.stereotype.Controller;
 public class TestController {
 
     @MessageMapping("/chat")
-    @SendTo("/topic/queue")
+    @SendTo("/topic/queuae")
     private String handle(String message) {
         return "Server received:" + message;
     }

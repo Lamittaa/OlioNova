@@ -8,7 +8,7 @@ import java.util.Arrays;
 @AllArgsConstructor
 @Getter
 public enum TicketStatus {
-    WAITING(1), SERVING(2), COMPLETED(3), CANCELLED(4);
+    WAITING(1), SERVING(2), COMPLETED(3), CANCELLED(4), MISSED(5);
     private final Integer id;
 
     public static TicketStatus fromId(Integer ticketStatusId){

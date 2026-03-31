@@ -1,6 +1,5 @@
 package com.project.queue_service.service;
 
-
 import com.project.queue_service.dto.QueueResponseDto;
 import com.project.queue_service.dto.QueueTicketResponse;
 import com.project.queue_service.dto.QueueUpdatedEvent;
@@ -18,23 +17,22 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
-
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class QueueManager {
 
-
     private final QueueTicketRepo queueTicketRepo;
     private final QueueCounterService queueCounterService;
     private final ApplicationEventPublisher appEventPublisher;
+    private final TellerSessionService tellerSessionService;
 
     @Transactional
     public QueueTicket issueTicket(QueueType queueType, Long orderId) {
@@ -43,12 +41,10 @@ public class QueueManager {
         if (queueTicketRepo.existsByOrderIdAndQueueType(orderId, queueType)) {
 
             throw new DuplicateTicketException(
-                    "Ticket already exists for this order in " + queueType
-            );
+                    "Ticket already exists for this order in " + queueType);
         }
 
-        int nextNumber =
-                queueCounterService.getAndIncrementTicketNumber(queueType);
+        int nextNumber = queueCounterService.getAndIncrementTicketNumber(queueType);
 
         QueueTicket ticket = new QueueTicket();
         ticket.setQueueType(queueType);
@@ -66,46 +62,43 @@ public class QueueManager {
         return saved;
     }
 
-
     @Transactional(noRollbackFor = NoWaitingTicketException.class)
     public QueueTicket advanceQueue(
             QueueType queueType,
             TellerAction action) {
 
-        Authentication authentication =
-                SecurityContextHolder.getContext().getAuthentication();
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         if (!(authentication.getPrincipal() instanceof Jwt jwt)) {
             throw new AccessDeniedException("Invalid authentication");
         }
 
         Long userId = jwt.getClaim("userId");
-
         if (userId == null) {
             throw new AccessDeniedException("userId missing in token");
         }
 
+        if (!tellerSessionService.isActive(userId, queueType)) {
+            throw new AccessDeniedException("Teller not logged in");
+        }
+
         // 1️⃣ check current serving ticket
-        Optional<QueueTicket> servingTicket =
-                queueTicketRepo.findByUserIdAndTicketStatusAndQueueDate(
-                        userId,
-                        TicketStatus.SERVING,
-                        LocalDate.now()
-                );
+        Optional<QueueTicket> servingTicket = queueTicketRepo.findByUserIdAndTicketStatusAndQueueDate(
+                userId,
+                TicketStatus.SERVING,
+                LocalDate.now());
 
         servingTicket.ifPresent(t -> postServingTicket(t, action));
 
         // 2️⃣ get next waiting ticket
-        Optional<QueueTicket> next =
-                queueTicketRepo.findNextWaiting(queueType);
+        Optional<QueueTicket> next = queueTicketRepo.findNextWaiting(queueType);
 
         if (next.isEmpty()) {
 
             // إذا أنهينا تذكرة فقط لا نحتاج فتح أخرى
             if (servingTicket.isPresent()) {
                 appEventPublisher.publishEvent(
-                        new QueueUpdatedEvent(queueType)
-                );
+                        new QueueUpdatedEvent(queueType));
             }
 
             throw new NoWaitingTicketException(queueType);
@@ -120,8 +113,7 @@ public class QueueManager {
         QueueTicket saved = queueTicketRepo.save(t);
 
         appEventPublisher.publishEvent(
-                new QueueUpdatedEvent(queueType)
-        );
+                new QueueUpdatedEvent(queueType));
 
         return saved;
     }
@@ -138,7 +130,9 @@ public class QueueManager {
 
         } else {
 
-            status = TicketStatus.CANCELLED;
+            status = TicketStatus.MISSED; // 🔥 فقط عند SKIP
+            t.setMissedAt(LocalDateTime.now()); // 🔥 هون فقط
+
         }
 
         t.setTicketStatus(status);
@@ -147,55 +141,53 @@ public class QueueManager {
         return queueTicketRepo.save(t);
     }
 
-//     @Transactional
-//     public QueueTicket completeTicket(
-//             QueueType queueType,
-//             Long ticketId) {
+    // @Transactional
+    // public QueueTicket completeTicket(
+    // QueueType queueType,
+    // Long ticketId) {
 
-//         QueueTicket ticket =
-//                 queueTicketRepo.findById(ticketId)
-//                         .orElseThrow(() ->
-//                                 new TicketNotFoundException(ticketId));
+    // QueueTicket ticket =
+    // queueTicketRepo.findById(ticketId)
+    // .orElseThrow(() ->
+    // new TicketNotFoundException(ticketId));
 
-//         if (ticket.getTicketStatus() != TicketStatus.SERVING) {
-//             throw new InvalidTicketStateException(
-//                     "Only SERVING ticket can be completed");
-//         }
+    // if (ticket.getTicketStatus() != TicketStatus.SERVING) {
+    // throw new InvalidTicketStateException(
+    // "Only SERVING ticket can be completed");
+    // }
 
-//         ticket.setTicketStatus(TicketStatus.COMPLETED);
-//         ticket.setCompletedAt(LocalDateTime.now());
+    // ticket.setTicketStatus(TicketStatus.COMPLETED);
+    // ticket.setCompletedAt(LocalDateTime.now());
 
-//         QueueTicket saved = queueTicketRepo.save(ticket);
+    // QueueTicket saved = queueTicketRepo.save(ticket);
 
-//         if (queueType == QueueType.PRODUCTION
-//                 && saved.getOrderItemId() != null) {
+    // if (queueType == QueueType.PRODUCTION
+    // && saved.getOrderItemId() != null) {
 
-//             orderClient.updateOrderItemStatus(
-//                     saved.getOrderItemId(),
-//                     Map.of("status", "READY_FOR_PICKUP"));
-//         }
+    // orderClient.updateOrderItemStatus(
+    // saved.getOrderItemId(),
+    // Map.of("status", "READY_FOR_PICKUP"));
+    // }
 
-//         appEventPublisher.publishEvent(
-//                 new QueueUpdatedEvent(queueType));
+    // appEventPublisher.publishEvent(
+    // new QueueUpdatedEvent(queueType));
 
-//         return saved;
-//     }
+    // return saved;
+    // }
 
     public QueueResponseDto getQueueStatus(
             QueueType queueType) {
 
-        List<QueueTicket> tickets =
-                queueTicketRepo
-                        .findAllByQueueTypeAndQueueDateAndTicketStatusIn(
-                                queueType,
-                                LocalDate.now(),
-                                List.of(
-                                        TicketStatus.SERVING,
-                                        TicketStatus.WAITING));
+        List<QueueTicket> tickets = queueTicketRepo
+                .findAllByQueueTypeAndQueueDateAndTicketStatusIn(
+                        queueType,
+                        LocalDate.now(),
+                        List.of(
+                                TicketStatus.SERVING,
+                                TicketStatus.WAITING));
 
         return QueueDtoUtil.buildQueueResponse(tickets);
     }
-
 
     public List<QueueTicketResponse> getTicketsByQueueType(QueueType queueType, LocalDate date) {
         return queueTicketRepo
@@ -206,7 +198,6 @@ public class QueueManager {
                 .map(QueueTicketMapper::mapToResponse)
                 .toList();
     }
-
 
     public Integer getTicketNumberByOrderIdAndQueueType(Long orderId, String queueTypeStr) {
         QueueType queueType = Arrays.stream(QueueType.values())
@@ -227,12 +218,11 @@ public class QueueManager {
         QueueTicket ticket;
         if (ticketId != null) {
             ticket = queueTicketRepo.findById(ticketId)
-                    .orElseThrow(() ->
-                            new TicketNotFoundException(ticketId));
+                    .orElseThrow(() -> new TicketNotFoundException(ticketId));
         } else if (orderId != null) {
             ticket = queueTicketRepo.findByQueueTypeAndOrderId(queueType, orderId)
-                    .orElseThrow(() ->
-                            new TicketNotFoundException("No Ticket found in " + queueType + " queue for order id: " + orderId));
+                    .orElseThrow(() -> new TicketNotFoundException(
+                            "No Ticket found in " + queueType + " queue for order id: " + orderId));
         } else {
             throw new IllegalArgumentException("At least one of Order id or Ticket id must be provided");
         }
@@ -258,8 +248,7 @@ public class QueueManager {
 
         // ✅ publish event
         appEventPublisher.publishEvent(
-                new QueueUpdatedEvent(ticket.getQueueType())
-        );
+                new QueueUpdatedEvent(ticket.getQueueType()));
 
         return saved;
     }
@@ -268,7 +257,8 @@ public class QueueManager {
             TicketStatus current,
             TicketStatus next) {
 
-        if (current == next) return;
+        if (current == next)
+            return;
 
         switch (current) {
 
@@ -295,4 +285,148 @@ public class QueueManager {
         }
     }
 
+    @Transactional
+    public QueueTicket returnToQueue(Long ticketId) {
+
+        QueueTicket ticket = queueTicketRepo.findById(ticketId)
+                .orElseThrow(() -> new RuntimeException("Ticket not found"));
+
+        if (ticket.getTicketStatus() != TicketStatus.MISSED) {
+            throw new RuntimeException("Only MISSED tickets can return");
+        }
+
+        if (ticket.getMissedAt() == null) {
+            throw new RuntimeException("Missed time not found");
+        }
+
+        long minutes = Duration
+                .between(ticket.getMissedAt(), LocalDateTime.now())
+                .toMinutes();
+
+        // ✅ رجع خلال 10 دقائق
+        if (minutes <= 10) {
+
+            ticket.setTicketStatus(TicketStatus.WAITING);
+
+            ticket.setMissedAt(null);
+            ticket.setUserId(null);
+            ticket.setCalledAt(null);
+            ticket.setCompletedAt(null);
+
+            return queueTicketRepo.save(ticket);
+        }
+
+        // ❌ تأخر → خلاص انتهت
+        else {
+
+            ticket.setTicketStatus(TicketStatus.CANCELLED);
+            ticket.setCompletedAt(LocalDateTime.now());
+
+            return queueTicketRepo.save(ticket);
+        }
+    }
+
+@Transactional
+public QueueTicket recallMissedTicket(QueueType queueType) {
+
+    if (queueType != QueueType.ACCOUNTING) {
+        throw new AccessDeniedException("Recall is only allowed for ACCOUNTING queue");
+    }
+
+    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+    Jwt jwt = (Jwt) auth.getPrincipal();
+    Long userId = jwt.getClaim("userId");
+
+    if (userId == null) {
+        throw new AccessDeniedException("userId missing in token");
+    }
+
+    if (!tellerSessionService.isActive(userId, queueType)) {
+        throw new AccessDeniedException("Teller not logged in");
+    }
+
+    Optional<QueueTicket> current =
+            queueTicketRepo.findByUserIdAndTicketStatusAndQueueDate(
+                    userId,
+                    TicketStatus.SERVING,
+                    LocalDate.now());
+
+    if (current.isPresent()) {
+        throw new RuntimeException("Finish current ticket first");
+    }
+
+    QueueTicket ticket = queueTicketRepo
+            .findFirstByQueueTypeAndTicketStatusOrderByTicketNumberAsc(
+                    queueType,
+                    TicketStatus.MISSED)
+            .orElseThrow(() -> new RuntimeException("No MISSED tickets"));
+
+    if (ticket.getMissedAt() == null) {
+        throw new RuntimeException("Invalid ticket");
+    }
+
+    long minutes = Duration
+            .between(ticket.getMissedAt(), LocalDateTime.now())
+            .toMinutes();
+
+    if (minutes > 10) {
+
+        ticket.setTicketStatus(TicketStatus.CANCELLED);
+        ticket.setCompletedAt(LocalDateTime.now());
+        queueTicketRepo.save(ticket);
+
+        appEventPublisher.publishEvent(new QueueUpdatedEvent(queueType)); 
+
+        throw new RuntimeException("Ticket expired (more than 10 minutes)");
+    }
+
+    ticket.setTicketStatus(TicketStatus.SERVING);
+    ticket.setCalledAt(LocalDateTime.now());
+    ticket.setUserId(userId);
+    ticket.setMissedAt(null);
+
+    QueueTicket saved = queueTicketRepo.save(ticket);
+
+    appEventPublisher.publishEvent(new QueueUpdatedEvent(queueType));
+
+    return saved;
+}
+    @Transactional
+    public QueueTicket recallCurrent(QueueType queueType) {
+
+        if (queueType != QueueType.ACCOUNTING) {
+            throw new RuntimeException("Recall is only allowed for ACCOUNTING queue");
+        }
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Jwt jwt = (Jwt) auth.getPrincipal();
+        Long userId = jwt.getClaim("userId");
+
+        if (userId == null) {
+            throw new AccessDeniedException("userId missing in token");
+        }
+
+        if (!tellerSessionService.isActive(userId, queueType)) {
+            throw new AccessDeniedException("Teller not logged in");
+        }
+
+        // 🔍 نجيب التذكرة الحالية (SERVING)
+        QueueTicket ticket = queueTicketRepo
+                .findByUserIdAndTicketStatusAndQueueDate(
+                        userId,
+                        TicketStatus.SERVING,
+                        LocalDate.now())
+                .orElseThrow(() -> new RuntimeException("No current ticket"));
+
+        // 🔥 فقط نحدث وقت النداء
+        ticket.setCalledAt(LocalDateTime.now());
+
+        QueueTicket saved = queueTicketRepo.save(ticket);
+
+        // 🔔 realtime update
+        appEventPublisher.publishEvent(
+                new QueueUpdatedEvent(queueType));
+
+        return saved;
+    }
 }
