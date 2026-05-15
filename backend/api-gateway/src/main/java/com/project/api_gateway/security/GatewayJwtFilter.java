@@ -34,6 +34,9 @@ public class GatewayJwtFilter implements GlobalFilter, Ordered {
         String path = exchange.getRequest().getURI().getPath();
 
         if (path.startsWith("/api/auth")
+                || path.startsWith("/api/public/queues")
+                || path.startsWith("/api/public/tracking")
+                || path.startsWith("/api/v1")
                 || path.startsWith("/actuator/health")
                 || path.startsWith("/v3/api-docs")
                 || path.startsWith("/swagger-ui")

@@ -8,6 +8,7 @@ import com.project.productionStages.model.ProductionStage;
 import com.project.productionStages.model.StageType;
 import com.project.productionStages.repository.ProductionStageRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +23,7 @@ import java.util.stream.Stream;
 @Service
 @RequiredArgsConstructor
 @Transactional
+@Slf4j
 public class OrderManagementService {
     private final QueueClient queueClient;
     private final OrderClient orderClient;
@@ -39,27 +41,44 @@ public class OrderManagementService {
                 .filter(s -> statusFilter == null || s.getStatus().equalsIgnoreCase(statusFilter))
                 // Sort
                 .sorted((a, b) -> switch (dashboardSort) {
-                    case QUEUE -> a.getQueueNumber().compareTo(b.getQueueNumber());
+                    case QUEUE -> compareNullable(a.getQueueNumber(), b.getQueueNumber());
 
-                    case ID -> a.getOrderId().compareTo(b.getOrderId());
+                    case ID -> compareNullable(a.getOrderId(), b.getOrderId());
 
-                    case STATUS -> a.getStatus().compareToIgnoreCase(b.getStatus());
+                    case STATUS -> compareNullableText(a.getStatus(), b.getStatus());
                 })
                 .toList();
 
     }
 
     public List<ProductionDashboardDto> getDashboard() {
+        List<QueueTicketResponse> ticketsResponse;
+        try {
+            ticketsResponse = queueClient.getTicketsByQueueType("PRODUCTION", LocalDate.now())
+                    .stream()
+                    .filter(t -> t.getOrderId() != null)
+                    .toList();
+        } catch (Exception ex) {
+            log.warn("Unable to load production queue tickets for dashboard", ex);
+            return List.of();
+        }
 
-        List<QueueTicketResponse> ticketsResponse = queueClient.getTicketsByQueueType("PRODUCTION", LocalDate.now())
-                .stream()
-                .filter(t -> t.getOrderId() != null)
-                .toList();
         List<Long> orderIds = ticketsResponse.stream()
                 .map(QueueTicketResponse::getOrderId)
+                .distinct()
                 .toList();
 
-        List<OrdersDashboardDto> orders = orderClient.getOrdersByIdsForProd(orderIds);
+        if (orderIds.isEmpty()) {
+            return List.of();
+        }
+
+        List<OrdersDashboardDto> orders;
+        try {
+            orders = orderClient.getOrdersByIdsForProd(orderIds);
+        } catch (Exception ex) {
+            log.warn("Unable to load orders for production dashboard", ex);
+            return List.of();
+        }
 
         Map<Long, QueueTicketResponse> queueMap = ticketsResponse.stream()
                 .collect(Collectors.toMap(
@@ -93,13 +112,15 @@ public class OrderManagementService {
 
             long completedItems = completedItemsIds.size();
 
-            String status = ticket.getTicketStatus();
+            String status = ticket != null && ticket.getTicketStatus() != null
+                    ? ticket.getTicketStatus()
+                    : order.getStatus();
             return ProductionDashboardDto.builder()
                     .orderId(order.getOrderId())
                     .status(status)
                     .itemsCount(itemsCount)
                     .completedItems(completedItems)
-                    .queueNumber(ticket.getTicketNumber())
+                    .queueNumber(ticket != null ? ticket.getTicketNumber() : null)
                     .storage(Optional.ofNullable(ordersStages.get(order.getOrderId()))
                             .map(stages ->
                                     stages.stream().filter(s -> s.getStageType().equals(StageType.STORAGE))
@@ -109,5 +130,31 @@ public class OrderManagementService {
                     .build();
 
         }).toList();
+    }
+
+    private static <T extends Comparable<T>> int compareNullable(T left, T right) {
+        if (left == null && right == null) {
+            return 0;
+        }
+        if (left == null) {
+            return 1;
+        }
+        if (right == null) {
+            return -1;
+        }
+        return left.compareTo(right);
+    }
+
+    private static int compareNullableText(String left, String right) {
+        if (left == null && right == null) {
+            return 0;
+        }
+        if (left == null) {
+            return 1;
+        }
+        if (right == null) {
+            return -1;
+        }
+        return left.compareToIgnoreCase(right);
     }
 }

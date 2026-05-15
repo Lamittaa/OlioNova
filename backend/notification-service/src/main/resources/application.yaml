@@ -4,3 +4,12 @@ spring:
 
   config:
     import: optional:configserver:http://localhost:8888
+
+twilio:
+  account-sid: ${TWILIO_ACCOUNT_SID:}
+  auth-token: ${TWILIO_AUTH_TOKEN:}
+  from-number: ${TWILIO_FROM_NUMBER:}
+
+security:
+  api-key:
+    internal: ${INTERNAL_API_KEY:}

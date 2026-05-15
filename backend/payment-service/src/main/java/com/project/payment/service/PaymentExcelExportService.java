@@ -1,6 +1,11 @@
 package com.project.payment.service;
 
 import com.project.payment.client.EmployeeClient;
+import com.project.payment.client.OrderClient;
+import com.project.payment.client.ProductClient;
+import com.project.payment.dto.OrderItemSummary;
+import com.project.payment.dto.OrderSummaryResponse;
+import com.project.payment.dto.ProductResponse;
 import com.project.payment.model.Payment;
 import com.project.payment.repository.PaymentRepository;
 
@@ -15,6 +20,7 @@ import org.apache.poi.xssf.usermodel.*;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -27,6 +33,8 @@ public class PaymentExcelExportService {
 
     private final PaymentRepository paymentRepository;
     private final EmployeeClient    employeeClient;
+    private final OrderClient       orderClient;
+    private final ProductClient     productClient;
 
     private static final DateTimeFormatter DATE_FMT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
@@ -169,11 +177,12 @@ public class PaymentExcelExportService {
                 orderCell.setCellStyle(currentData);
 
                 // Total Price
+                BigDecimal resolvedTotal = resolvePaymentTotal(p);
                 Cell priceCell = row.createCell(2);
                 priceCell.setCellValue(
-                        p.getTotalPrice().doubleValue());
+                        resolvedTotal.doubleValue());
                 priceCell.setCellStyle(currentAmount);
-                grandTotal += p.getTotalPrice().doubleValue();
+                grandTotal += resolvedTotal.doubleValue();
 
                 // Payment Type
                 Cell typeCell = row.createCell(3);
@@ -244,6 +253,82 @@ public class PaymentExcelExportService {
                     userId);
             return "ID: " + userId;
         }
+    }
+
+    private BigDecimal resolvePaymentTotal(Payment payment) {
+        if (payment.getTotalPrice() != null
+                && payment.getTotalPrice().compareTo(BigDecimal.ZERO) > 0) {
+            return payment.getTotalPrice();
+        }
+
+        try {
+            OrderSummaryResponse order =
+                    orderClient.getOrderById(payment.getOrderId());
+            return calculateOrderTotal(order);
+        }
+        catch (Exception e) {
+            log.warn(
+                    "Could not recalculate total for paymentId={}, orderId={}",
+                    payment.getId(),
+                    payment.getOrderId(),
+                    e);
+            return payment.getTotalPrice() == null
+                    ? BigDecimal.ZERO
+                    : payment.getTotalPrice();
+        }
+    }
+
+    private BigDecimal calculateOrderTotal(OrderSummaryResponse order) {
+        BigDecimal total = BigDecimal.ZERO;
+
+        for (OrderItemSummary item : order.getItems()) {
+            ProductResponse product =
+                    productClient.getProduct(item.getProductId());
+            String productType = product.getProductType() == null
+                    ? ""
+                    : product.getProductType();
+
+            if (isOlivePressingProduct(productType)) {
+                total = total.add(
+                        calculateKgPrice(item.getQuantity(), order.isMember()));
+            }
+            else if (isPurchaseProduct(productType)) {
+                if ("KG".equalsIgnoreCase(product.getUnit())) {
+                    total = total.add(
+                            calculateKgPrice(item.getQuantity(), order.isMember()));
+                }
+                else {
+                    total = total.add(product.getPrice()
+                            .multiply(BigDecimal.valueOf(item.getQuantity())));
+                }
+            }
+        }
+
+        return total;
+    }
+
+    private BigDecimal calculateKgPrice(double weight, boolean isMember) {
+        double rate;
+
+        if (isMember) {
+            rate = 0.4;
+        }
+        else {
+            rate = (weight >= 100) ? 0.6 : 0.8;
+        }
+
+        return BigDecimal.valueOf(weight * rate);
+    }
+
+    private boolean isOlivePressingProduct(String productType) {
+        return "SERVICE".equalsIgnoreCase(productType)
+                || "OLIVE".equalsIgnoreCase(productType);
+    }
+
+    private boolean isPurchaseProduct(String productType) {
+        return "PURCHASE".equalsIgnoreCase(productType)
+                || "JIFT".equalsIgnoreCase(productType)
+                || "GALLON".equalsIgnoreCase(productType);
     }
 
     // =========================================================

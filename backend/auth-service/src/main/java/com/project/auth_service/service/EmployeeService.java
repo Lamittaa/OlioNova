@@ -3,6 +3,7 @@
 package com.project.auth_service.service;
 
 import com.project.auth_service.dto.CreateEmployeeRequest;
+import com.project.auth_service.dto.UpdateEmployeeRequest;
 import com.project.auth_service.dto.UpdateProfileRequest;
 import com.project.auth_service.exception.*;
 import com.project.auth_service.model.*;
@@ -29,10 +30,6 @@ public class EmployeeService {
 
         if (employeeRepo.existsByNationalId(req.getNationalId())) {
             throw new EntityAlreadyExistsException("National ID already exists");
-        }
-
-        if (employeeRepo.existsByEmail(req.getEmail())) {
-            throw new EntityAlreadyExistsException("Email already exists");
         }
 
         Role role = roleRepo.findByName(req.getRoleName())
@@ -88,6 +85,54 @@ public class EmployeeService {
         employee.getUser().setEnabled(false);
     }
 
+    @Transactional
+    public Employee updateEmployee(Long id, UpdateEmployeeRequest req) {
+        Employee employee = getEmployeeById(id);
+
+        if (req.getNationalId() != null && !req.getNationalId().equals(employee.getNationalId())) {
+            if (employeeRepo.existsByNationalId(req.getNationalId())) {
+                throw new EntityAlreadyExistsException("National ID already exists");
+            }
+            employee.setNationalId(req.getNationalId());
+        }
+
+        if (req.getFirstName() != null) {
+            employee.setFirstName(req.getFirstName());
+        }
+
+        if (req.getLastName() != null) {
+            employee.setLastName(req.getLastName());
+        }
+
+        if (req.getPhoneNumber() != null) {
+            employee.setPhoneNumber(req.getPhoneNumber());
+        }
+
+        if (req.getEmail() != null) {
+            employee.setEmail(req.getEmail());
+        }
+
+        if (req.getGender() != null) {
+            employee.setGender(Gender.valueOf(req.getGender()));
+        }
+
+        if (req.getMaritalStatus() != null) {
+            employee.setMartialStatus(MaritalStatus.valueOf(req.getMaritalStatus()));
+        }
+
+        if (req.getRoleName() != null) {
+            Role role = roleRepo.findByName(req.getRoleName())
+                    .orElseThrow(() -> new RoleNotFoundException("Role not found: " + req.getRoleName()));
+            employee.getUser().setRole(role);
+        }
+
+        if (req.getEnabled() != null) {
+            employee.getUser().setEnabled(req.getEnabled());
+        }
+
+        return employee;
+    }
+
     @Transactional(readOnly = true)
     public Employee getMyProfile(String username) {
         return employeeRepo.findByUserUsername(username)
@@ -113,6 +158,10 @@ public class EmployeeService {
 
         if (req.getEmail() != null) {
             employee.setEmail(req.getEmail());
+        }
+
+        if (req.getCity() != null) {
+            employee.setCity(req.getCity());
         }
 
         if (req.getMaritalStatus() != null) {

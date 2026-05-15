@@ -28,6 +28,9 @@ import java.util.List;
 @Transactional
 public class OrderItemService {
 
+    private static final String MEMBER_OLIVE_PRODUCT = "زيتون للمساهم";
+    private static final String STANDARD_OLIVE_PRODUCT = "زيتون لغير المساهم";
+
     private final OrderRepo         orderRepo;
     private final OrderItemRepo     itemRepo;
     private final ProductLookupRepo productRepo;
@@ -82,11 +85,12 @@ public class OrderItemService {
                                 "Product not found with id: "
                                 + request.getProductId()));
 
-        validateAddItemRules(order, product, request);
-
         boolean isMember = customerClient
                 .getMembership(order.getCustomerId())
                 .isMembership();
+        product = resolveCustomerPricedProduct(product, isMember);
+
+        validateAddItemRules(order, product, request);
 
         OrderItem item = new OrderItem();
         item.setOrder(order);
@@ -231,7 +235,7 @@ private void validateAddItemRules(Order order,
                                    ProductLookup product,
                                    AddOrderItemRequest request) {
 
-    if ("PURCHASE".equalsIgnoreCase(product.getProductType())) {
+    if (isStockTrackedPurchase(product)) {
 
         if (request.getNote() != null
                 && !request.getNote().isBlank()) {
@@ -283,8 +287,7 @@ private void validateAddItemRules(Order order,
     }
 
     // SERVICE
-    if ("SERVICE".equalsIgnoreCase(product.getProductType())
-            || "OLIVE".equalsIgnoreCase(product.getProductType())) {
+    if (isOliveProduct(product)) {
 
         if (request.getOliveType() == null
                 || request.getBagsCount() == null) {
@@ -356,16 +359,29 @@ private void validateAddItemRules(Order order,
 
     private BigDecimal computeFinalPrice(ProductLookup product,
                                           boolean isMember) {
-        BigDecimal base = product.getPrice();
+        return product.getPrice().setScale(2, RoundingMode.HALF_UP);
+    }
 
-        if (isMember && product.getMemberDiscount() != null) {
-            BigDecimal factor = BigDecimal.ONE.subtract(
-                    product.getMemberDiscount());
-            return base.multiply(factor)
-                       .setScale(2, RoundingMode.HALF_UP);
+    private ProductLookup resolveCustomerPricedProduct(ProductLookup product,
+                                                       boolean isMember) {
+        if (!isOliveProduct(product)) {
+            return product;
         }
 
-        return base.setScale(2, RoundingMode.HALF_UP);
+        String productName = isMember ? MEMBER_OLIVE_PRODUCT : STANDARD_OLIVE_PRODUCT;
+        return productRepo.findByProductNameIgnoreCaseAndActiveTrue(productName)
+                .orElse(product);
+    }
+
+    private boolean isOliveProduct(ProductLookup product) {
+        return product.getProductType() != null
+                && ("OLIVE".equalsIgnoreCase(product.getProductType())
+                || "SERVICE".equalsIgnoreCase(product.getProductType()));
+    }
+
+    private boolean isStockTrackedPurchase(ProductLookup product) {
+        return product.getProductType() != null
+                && "PURCHASE".equalsIgnoreCase(product.getProductType());
     }
 
     private void recomputeOrderTotal(Order order) {

@@ -18,9 +18,13 @@ public class ProductionController {
     private final ProductionService productionService;
     private final OrderManagementService orderManagementService;
 
-    // =========================================================
-    // ✅ 1. Get Orders List
-    // =========================================================
+    @GetMapping("/dashboard")
+    public ResponseEntity<List<ProductionDashboardDto>> getDashboard(
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String sort) {
+        return ResponseEntity.ok(orderManagementService.getDashboardFiltered(sort, status));
+    }
+
     @GetMapping("/orders")
     public ResponseEntity<List<ProductionDashboardDto>> getOrders(
             @RequestParam(required = false) String status,
@@ -28,9 +32,6 @@ public class ProductionController {
         return ResponseEntity.ok(orderManagementService.getDashboardFiltered(sort, status));
     }
 
-    // =========================================================
-    // ✅ 2. Get Order Details
-    // =========================================================
     @GetMapping("/orders/{orderId}")
     public ResponseEntity<OrderDetailsResponse> getOrderDetails(
             @PathVariable Long orderId) {
@@ -53,7 +54,6 @@ public class ProductionController {
         return ResponseEntity.ok(response);
     }
 
-
     @PostMapping("/start")
     public ResponseEntity<String> startProduction(
             @RequestBody StartProductionRequest request) {
@@ -69,15 +69,9 @@ public class ProductionController {
         return ResponseEntity.ok(productionService.getStagesByLine(line));
     }
 
-    // =========================================================
-    // ✅ GET available lines
-    // =========================================================
     @GetMapping("/lines/available")
     public ResponseEntity<List<String>> getAvailableLines() {
-
-        List<String> lines = productionService.getAvailableLines();
-
-        return ResponseEntity.ok(lines);
+        return ResponseEntity.ok(productionService.getAvailableLines());
     }
 
     @GetMapping("/lines/overview")
@@ -85,10 +79,14 @@ public class ProductionController {
         return ResponseEntity.ok(productionService.getLineOverview());
     }
 
-    @PostMapping("/storage/deliver")
-    public ResponseEntity<Void> markStorageDelivered(@RequestBody List<Long> stageIds ){
+    @GetMapping("/pipeline")
+    public ResponseEntity<List<LineResponse>> getPipeline() {
+        return ResponseEntity.ok(productionService.getLineOverview());
+    }
 
-         productionService.markStorageDelivered(stageIds);
+    @PostMapping("/storage/deliver")
+    public ResponseEntity<Void> markStorageDelivered(@RequestBody List<Long> stageIds) {
+        productionService.markStorageDelivered(stageIds);
         return ResponseEntity.noContent().build();
     }
 }

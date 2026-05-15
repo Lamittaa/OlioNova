@@ -110,7 +110,11 @@ public class PaymentService {
         // -------------------------------------------
         // SERVICE — عصر الزيتون
         // -------------------------------------------
-        if ("SERVICE".equalsIgnoreCase(product.getProductType())) {
+        String productType = product.getProductType() == null
+                ? ""
+                : product.getProductType();
+
+        if (isOlivePressingProduct(productType)) {
 
             hasService = true;
 
@@ -122,7 +126,7 @@ public class PaymentService {
 
             PaymentItemDetail detail = new PaymentItemDetail();
             detail.setProductName(product.getProductName());
-            detail.setProductType("SERVICE");
+            detail.setProductType(productType);
             detail.setOliveType(item.getOliveType());
             detail.setBagsCount(item.getBagsCount());
             detail.setQuantity((int) weight);
@@ -133,7 +137,7 @@ public class PaymentService {
         // -------------------------------------------
         // PURCHASE — KG + PIECE
         // -------------------------------------------
-        else if ("PURCHASE".equalsIgnoreCase(product.getProductType())) {
+        else if (isPurchaseProduct(productType)) {
 
             BigDecimal lineTotal;
 
@@ -168,7 +172,7 @@ public class PaymentService {
 
             PaymentItemDetail detail = new PaymentItemDetail();
             detail.setProductName(product.getProductName());
-            detail.setProductType("PURCHASE");
+            detail.setProductType(productType);
             detail.setQuantity((int) item.getQuantity());
             detail.setTotal(lineTotal);
             itemDetails.add(detail);
@@ -203,11 +207,9 @@ public class PaymentService {
             queueClient.issueProductionTicket(orderId);
         }
         catch (FeignException e) {
-            log.error(
-                    "Queue service unavailable for orderId={}",
+            log.warn(
+                    "Queue service unavailable for orderId={}, payment will remain recorded",
                     orderId, e);
-            throw new ServiceUnavailableException(
-                    "Queue service must be running for pressing orders");
         }
     }
 
@@ -270,6 +272,17 @@ public class PaymentService {
         }
 
         return BigDecimal.valueOf(weight * rate);
+    }
+
+    private boolean isOlivePressingProduct(String productType) {
+        return "SERVICE".equalsIgnoreCase(productType)
+                || "OLIVE".equalsIgnoreCase(productType);
+    }
+
+    private boolean isPurchaseProduct(String productType) {
+        return "PURCHASE".equalsIgnoreCase(productType)
+                || "JIFT".equalsIgnoreCase(productType)
+                || "GALLON".equalsIgnoreCase(productType);
     }
 
     // =====================================================

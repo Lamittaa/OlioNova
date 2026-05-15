@@ -13,6 +13,8 @@ public class UpdateProductRequest {
     @Size(max = 100, message = "Product name must be at most 100 characters")
     private String productName;
 
+    private String productType;
+
     @Min(value = 0, message = "Inventory total quantity cannot be negative")
     private Integer inventoryTotalQuantity;
 

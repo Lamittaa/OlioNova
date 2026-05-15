@@ -7,5 +7,6 @@ public record TicketDto(
         String number,
         QueueType type,
         Long orderId,
-        String checkInTime
+        String checkInTime,
+        String productionLine
 ) { }

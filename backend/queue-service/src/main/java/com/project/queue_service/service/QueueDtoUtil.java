@@ -7,6 +7,7 @@ import com.project.queue_service.model.TicketStatus;
 import java.time.Duration;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 
 public class QueueDtoUtil {
 
@@ -16,11 +17,12 @@ public class QueueDtoUtil {
                 .filter(t -> t.getTicketStatus() == TicketStatus.SERVING)
                 .map(t -> new ServingTicketDto(
                         new TicketDto(
-                                t.getId().toString(),
-                                t.getTicketNumber().toString(),
+                                safeString(t.getId()),
+                                safeString(t.getTicketNumber()),
                                 t.getQueueType(),
                                 t.getOrderId(),
-                                t.getCreatedAt().toString()
+                                safeString(t.getCreatedAt()),
+                                t.getProductionLine()
                         ),
                         t.getQueueType(),
                         t.getCalledAt() != null
@@ -31,13 +33,15 @@ public class QueueDtoUtil {
 
         List<WaitingTicketDto> waiting = tickets.stream()
                 .filter(t -> t.getTicketStatus() == TicketStatus.WAITING)
-                .sorted(Comparator.comparing(QueueTicket::getCreatedAt))
+                .sorted(Comparator.comparing(
+                        QueueTicket::getCreatedAt,
+                        Comparator.nullsLast(Comparator.naturalOrder())))
                 .map(t -> new WaitingTicketDto(
-                        t.getId().toString(),
-                        t.getTicketNumber().toString(),
+                        safeString(t.getId()),
+                        safeString(t.getTicketNumber()),
                         t.getQueueType(),
                         t.getOrderId(),
-                        t.getCreatedAt().toString(),
+                        safeString(t.getCreatedAt()),
                         estimateWaitMinutes(tickets, t)
                 ))
                 .toList();
@@ -65,7 +69,9 @@ public class QueueDtoUtil {
 
         List<QueueTicket> waitingTickets = allTickets.stream()
                 .filter(t -> t.getTicketStatus() == TicketStatus.WAITING)
-                .sorted(Comparator.comparing(QueueTicket::getCreatedAt))
+                .sorted(Comparator.comparing(
+                        QueueTicket::getCreatedAt,
+                        Comparator.nullsLast(Comparator.naturalOrder())))
                 .toList();
 
         int position = waitingTickets.indexOf(ticket);
@@ -79,6 +85,7 @@ public class QueueDtoUtil {
         List<Long> waitTimes = tickets.stream()
                 .filter(t -> t.getTicketStatus() == TicketStatus.SERVING)
                 .filter(t -> t.getCalledAt() != null)
+                .filter(t -> t.getCreatedAt() != null)
                 .map(t -> Duration.between(
                         t.getCreatedAt(),
                         t.getCalledAt()
@@ -93,5 +100,9 @@ public class QueueDtoUtil {
                 .mapToLong(Long::longValue)
                 .average()
                 .orElse(0);
+    }
+
+    private static String safeString(Object value) {
+        return Objects.toString(value, "");
     }
 }

@@ -1,4 +1,5 @@
 package com.project.order.dto;
+
 import jakarta.validation.constraints.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -11,6 +12,7 @@ public class CreateProductRequest {
     @NotBlank(message = "Product name cannot be empty")
     @Size(max = 100, message = "Product name must be at most 100 characters")
     private String productName;
+    private String productType;
 
     @NotNull(message = "Price cannot be null")
     @DecimalMin(value = "0.00", inclusive = false, message = "Price must be greater than 0")
@@ -23,4 +25,5 @@ public class CreateProductRequest {
     @NotNull(message = "Inventory is required")
     @Min(value = 0, message = "Inventory cannot be negative")
     private Integer inventoryTotalQuantity;
+
 }

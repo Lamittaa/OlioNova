@@ -1,0 +1,11 @@
+Place your logo file here as:
+
+brand-logo.png
+
+Recommended:
+- transparent background
+- square or near-square
+- at least 512x512
+
+The login screen and the dashboard top bar already look for `/brand-logo.png` automatically.
+If `brand-logo.png` is missing, the app falls back to the bundled `/press-logo.png`.

@@ -5,7 +5,6 @@ import com.project.queue_service.dto.QueueUpdatedEvent;
 import com.project.queue_service.model.QueueTicket;
 import com.project.queue_service.model.TicketStatus;
 import com.project.queue_service.repository.QueueTicketRepo;
-import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.event.TransactionPhase;
@@ -15,11 +14,15 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
 public class QueueUpdateListener {
 
         private final QueueTicketRepo queueTicketRepo;
         private final RealtimeNotifier realtimeNotifier;
+
+        public QueueUpdateListener(QueueTicketRepo queueTicketRepo, RealtimeNotifier realtimeNotifier) {
+                this.queueTicketRepo = queueTicketRepo;
+                this.realtimeNotifier = realtimeNotifier;
+        }
 
         @Async
         @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)

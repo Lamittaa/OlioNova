@@ -1,5 +1,6 @@
 package com.project.productionStages.dto;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import java.util.List;
 
 import lombok.AllArgsConstructor;
@@ -13,6 +14,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class OrderResponse {
 
+    @JsonAlias("id")
     private Long orderId;
 
     private String status;

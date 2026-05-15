@@ -24,6 +24,13 @@ public interface QueueTicketRepo extends JpaRepository<QueueTicket, Long> {
     );
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
+    Optional<QueueTicket> findFirstByQueueTypeAndQueueDateAndTicketStatusOrderByTicketNumberAsc(
+            QueueType queueType,
+            LocalDate queueDate,
+            TicketStatus ticketStatus
+    );
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<QueueTicket> findByUserIdAndTicketStatusAndQueueDate(
             Long userId,
             TicketStatus ticketStatus,
@@ -37,8 +44,9 @@ public interface QueueTicketRepo extends JpaRepository<QueueTicket, Long> {
     );
 
     default Optional<QueueTicket> findNextWaiting(QueueType queueType) {
-        return findFirstByQueueTypeAndTicketStatusOrderByTicketNumberAsc(
+        return findFirstByQueueTypeAndQueueDateAndTicketStatusOrderByTicketNumberAsc(
                 queueType,
+                LocalDate.now(),
                 TicketStatus.WAITING
         );
     }

@@ -1,14 +1,17 @@
 package com.project.queue_service.service;
 
+import com.project.queue_service.dto.PublicQueueDisplayResponse;
+import com.project.queue_service.dto.PublicQueueTicketDto;
 import com.project.queue_service.dto.QueueResponseDto;
 import com.project.queue_service.dto.QueueTicketResponse;
 import com.project.queue_service.dto.QueueUpdatedEvent;
+import com.project.queue_service.dto.ServingTicketDto;
 import com.project.queue_service.exception.*;
 import com.project.queue_service.mapper.QueueTicketMapper;
 import com.project.queue_service.model.*;
 import com.project.queue_service.repository.QueueTicketRepo;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
@@ -21,18 +24,31 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 
 @Service
-@RequiredArgsConstructor
-@Slf4j
 public class QueueManager {
+
+    private static final Logger log = LoggerFactory.getLogger(QueueManager.class);
 
     private final QueueTicketRepo queueTicketRepo;
     private final QueueCounterService queueCounterService;
     private final ApplicationEventPublisher appEventPublisher;
     private final TellerSessionService tellerSessionService;
+
+    public QueueManager(
+            QueueTicketRepo queueTicketRepo,
+            QueueCounterService queueCounterService,
+            ApplicationEventPublisher appEventPublisher,
+            TellerSessionService tellerSessionService) {
+        this.queueTicketRepo = queueTicketRepo;
+        this.queueCounterService = queueCounterService;
+        this.appEventPublisher = appEventPublisher;
+        this.tellerSessionService = tellerSessionService;
+    }
 
     @Transactional
     public QueueTicket issueTicket(QueueType queueType, Long orderId) {
@@ -83,12 +99,15 @@ public class QueueManager {
         }
 
         // 1️⃣ check current serving ticket
-        Optional<QueueTicket> servingTicket = queueTicketRepo.findByUserIdAndTicketStatusAndQueueDate(
-                userId,
-                TicketStatus.SERVING,
-                LocalDate.now());
+        Optional<QueueTicket> servingTicket = Optional.empty();
+        if (queueType != QueueType.PRODUCTION) {
+            servingTicket = queueTicketRepo.findByUserIdAndTicketStatusAndQueueDate(
+                    userId,
+                    TicketStatus.SERVING,
+                    LocalDate.now());
 
-        servingTicket.ifPresent(t -> postServingTicket(t, action));
+            servingTicket.ifPresent(t -> postServingTicket(t, action));
+        }
 
         // 2️⃣ get next waiting ticket
         Optional<QueueTicket> next = queueTicketRepo.findNextWaiting(queueType);
@@ -177,16 +196,93 @@ public class QueueManager {
 
     public QueueResponseDto getQueueStatus(
             QueueType queueType) {
+        try {
+            List<QueueTicket> tickets = queueTicketRepo
+                    .findAllByQueueTypeAndQueueDateAndTicketStatusIn(
+                            queueType,
+                            LocalDate.now(),
+                            List.of(
+                                    TicketStatus.SERVING,
+                                    TicketStatus.WAITING));
 
-        List<QueueTicket> tickets = queueTicketRepo
-                .findAllByQueueTypeAndQueueDateAndTicketStatusIn(
-                        queueType,
-                        LocalDate.now(),
-                        List.of(
-                                TicketStatus.SERVING,
-                                TicketStatus.WAITING));
+            return QueueDtoUtil.buildQueueResponse(tickets);
+        } catch (Exception ex) {
+            log.error("Failed to build queue status for {}", queueType, ex);
+            return QueueDtoUtil.buildQueueResponse(List.of());
+        }
+    }
 
-        return QueueDtoUtil.buildQueueResponse(tickets);
+    public PublicQueueDisplayResponse getPublicQueueDisplay(QueueType queueType) {
+        QueueResponseDto status = getQueueStatus(queueType);
+        PublicQueueTicketDto nowServing = status.serving().stream()
+                .findFirst()
+                .map(ticket -> new PublicQueueTicketDto(
+                        displayTicketNumber(queueType, ticket.ticket().number()),
+                        ticket.startedAt(),
+                        ticket.ticket().orderId(),
+                        0,
+                        ticket.ticket().productionLine()
+                ))
+                .orElse(null);
+
+        List<PublicQueueTicketDto> nowServingLines = status.serving().stream()
+                .sorted(Comparator
+                        .comparingInt((ServingTicketDto ticket) -> lineOrder(ticket.ticket().productionLine()))
+                        .thenComparingInt(ticket -> ticketNumberOrder(ticket.ticket().number())))
+                .map(ticket -> new PublicQueueTicketDto(
+                        displayTicketNumber(queueType, ticket.ticket().number()),
+                        ticket.startedAt(),
+                        ticket.ticket().orderId(),
+                        0,
+                        ticket.ticket().productionLine()
+                ))
+                .toList();
+
+        List<PublicQueueTicketDto> nextInLine = status.waiting().stream()
+                .limit(8)
+                .map(ticket -> new PublicQueueTicketDto(
+                        displayTicketNumber(queueType, ticket.number()),
+                        null,
+                        ticket.orderId(),
+                        ticket.estimatedWaitMinutes(),
+                        null
+                ))
+                .toList();
+
+        return new PublicQueueDisplayResponse(
+                queueType,
+                queueLabel(queueType),
+                nowServing,
+                nowServingLines,
+                nextInLine,
+                status.stats().totalWaiting(),
+                status.stats().averageWaitTime(),
+                instruction(queueType),
+                status.lastUpdated()
+        );
+    }
+
+    private String displayTicketNumber(QueueType queueType, String ticketNumber) {
+        String prefix = queueType == QueueType.PRODUCTION ? "P" : "A";
+        if (ticketNumber == null || ticketNumber.isBlank()) {
+            return prefix + "---";
+        }
+
+        try {
+            return prefix + String.format("%03d", Integer.parseInt(ticketNumber));
+        } catch (NumberFormatException ex) {
+            return prefix + ticketNumber;
+        }
+    }
+
+    private String queueLabel(QueueType queueType) {
+        return queueType == QueueType.PRODUCTION ? "Production Queue" : "Accounting Queue";
+    }
+
+    private String instruction(QueueType queueType) {
+        return queueType == QueueType.PRODUCTION
+                ? "Please proceed to the production area"
+                : "Please proceed to the cashier";
     }
 
     public List<QueueTicketResponse> getTicketsByQueueType(QueueType queueType, LocalDate date) {
@@ -213,7 +309,8 @@ public class QueueManager {
             QueueType queueType,
             Long ticketId,
             Long orderId,
-            TicketStatus newStatus) {
+            TicketStatus newStatus,
+            String productionLine) {
 
         QueueTicket ticket;
         if (ticketId != null) {
@@ -231,6 +328,19 @@ public class QueueManager {
 
         // ✅ Optional: enforce valid transitions
         validateTransition(currentStatus, newStatus);
+
+        String normalizedProductionLine = normalizeProductionLine(productionLine);
+        if (newStatus == TicketStatus.SERVING && queueType == QueueType.PRODUCTION) {
+            if (normalizedProductionLine == null) {
+                throw new InvalidTicketStateException("Production line is required for production tickets");
+            }
+
+            if (currentStatus == TicketStatus.WAITING) {
+                enforceFirstWaitingTicket(queueType, ticket);
+            }
+
+            ticket.setProductionLine(normalizedProductionLine);
+        }
 
         ticket.setTicketStatus(newStatus);
 
@@ -251,6 +361,54 @@ public class QueueManager {
                 new QueueUpdatedEvent(ticket.getQueueType()));
 
         return saved;
+    }
+
+    private void enforceFirstWaitingTicket(QueueType queueType, QueueTicket ticket) {
+        QueueTicket nextWaitingTicket = queueTicketRepo.findNextWaiting(queueType)
+                .orElseThrow(() -> new InvalidTicketStateException("No waiting production tickets"));
+
+        if (!nextWaitingTicket.getId().equals(ticket.getId())) {
+            throw new InvalidTicketStateException(
+                    "Ticket " + ticket.getTicketNumber() + " cannot be served before ticket "
+                            + nextWaitingTicket.getTicketNumber());
+        }
+    }
+
+    private String normalizeProductionLine(String productionLine) {
+        if (productionLine == null || productionLine.isBlank()) {
+            return null;
+        }
+
+        String normalized = productionLine.trim().toUpperCase(Locale.ROOT);
+        if (!normalized.equals("A") && !normalized.equals("B")) {
+            throw new InvalidTicketStateException("Production line must be A or B");
+        }
+
+        return normalized;
+    }
+
+    private int lineOrder(String productionLine) {
+        if ("A".equalsIgnoreCase(productionLine)) {
+            return 0;
+        }
+
+        if ("B".equalsIgnoreCase(productionLine)) {
+            return 1;
+        }
+
+        return 2;
+    }
+
+    private int ticketNumberOrder(String ticketNumber) {
+        if (ticketNumber == null || ticketNumber.isBlank()) {
+            return Integer.MAX_VALUE;
+        }
+
+        try {
+            return Integer.parseInt(ticketNumber);
+        } catch (NumberFormatException ex) {
+            return Integer.MAX_VALUE;
+        }
     }
 
     private void validateTransition(

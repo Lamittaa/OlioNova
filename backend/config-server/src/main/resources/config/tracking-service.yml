@@ -38,6 +38,8 @@ eureka:
 security:
   jwt:
     secret: "MySuperSecretKeyForJwt1234567890MyExtra"
+  api-key:
+    internal: "internal-dev-key"
 
 springdoc:
   api-docs:

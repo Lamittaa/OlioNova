@@ -13,6 +13,7 @@ public class ProfileResponse {
     private String lastName;
     private String phoneNumber;
     private String email;
+    private String city;
     private String gender;
     private String maritalStatus;
     private String username;

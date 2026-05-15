@@ -14,6 +14,8 @@ public interface ProductLookupRepo extends JpaRepository<ProductLookup, Long> {
 
     boolean existsByProductNameIgnoreCase(String productName);
 
+    Optional<ProductLookup> findByProductNameIgnoreCaseAndActiveTrue(String productName);
+
     Optional<ProductLookup> findByIdAndActiveTrue(Long id);
 
     List<ProductLookup> findByActiveTrueOrderByProductNameAsc();

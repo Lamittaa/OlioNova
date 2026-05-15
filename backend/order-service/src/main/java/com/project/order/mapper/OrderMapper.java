@@ -7,56 +7,72 @@ import com.project.order.dto.PurchaseItemResponse;
 import com.project.order.model.Order;
 import com.project.order.model.OrderItem;
 import com.project.order.model.OrderStatus;
-import org.mapstruct.Mapper;
+import org.springframework.stereotype.Component;
 
-@Mapper(componentModel = "spring")
-public interface OrderMapper {
+@Component
+public class OrderMapper {
 
-    OrderResponse toOrderResponse(Order order);
-
-    default OrderItemResponse mapItem(OrderItem item) {
-
-        if (item.getProductType() == null) {
-            throw new IllegalStateException(
-                    "OrderItem productType is NULL for itemId=" + item.getId());
+    public OrderResponse toOrderResponse(Order order) {
+        if (order == null) {
+            return null;
         }
 
-        if ("SERVICE".equalsIgnoreCase(item.getProductType())) {
+        OrderResponse response = new OrderResponse();
+        response.setId(order.getId());
+        response.setCustomerId(order.getCustomerId());
+        response.setStatus(order.getStatus() != null ? order.getStatus().getStatusName() : null);
+        if (order.getCreatedAt() != null) {
+            response.setCreatedAt(order.getCreatedAt());
+        }
+        if (order.getUpdatedAt() != null) {
+            response.setUpdatedAt(order.getUpdatedAt());
+        }
+        return response;
+    }
 
+    public OrderItemResponse mapItem(OrderItem item) {
+        if (item == null) {
+            return null;
+        }
+
+        if (isServiceLike(item)) {
             OliveServiceItemResponse dto = new OliveServiceItemResponse();
             fillCommon(item, dto);
-
             dto.setOliveType(item.getOliveType());
             dto.setBagsCount(item.getBagsCount());
             dto.setNote(item.getNote());
-
             return dto;
         }
 
-        if ("PURCHASE".equalsIgnoreCase(item.getProductType())) {
-
-            PurchaseItemResponse dto = new PurchaseItemResponse();
-            fillCommon(item, dto);
-            return dto;
-        }
-
-        throw new IllegalStateException(
-                "Unknown productType: " + item.getProductType());
+        PurchaseItemResponse dto = new PurchaseItemResponse();
+        fillCommon(item, dto);
+        return dto;
     }
 
-    default void fillCommon(OrderItem item, OrderItemResponse dto) {
+    private void fillCommon(OrderItem item, OrderItemResponse dto) {
         dto.setId(item.getId());
         dto.setProductId(item.getProductId());
         dto.setProductName(item.getProductName());
         dto.setProductType(item.getProductType());
         dto.setQuantity(item.getQuantity());
-        dto.setStatus(
-                item.getStatus() != null
-                        ? item.getStatus().getStatusName()
-                        : null);
+        dto.setStatus(item.getStatus() != null ? item.getStatus().getStatusName() : null);
     }
 
-    default String map(OrderStatus status) {
+    public String map(OrderStatus status) {
         return status == null ? null : status.getStatusName();
     }
+
+    public boolean isServiceLike(OrderItem item) {
+        if (item == null) {
+            return false;
+        }
+
+        if (item.getProductType() != null && "SERVICE".equalsIgnoreCase(item.getProductType())) {
+            return true;
+        }
+
+        return item.getOliveType() != null || item.getBagsCount() != null || item.getNote() != null;
+    }
 }
+
+

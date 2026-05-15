@@ -4,9 +4,8 @@ import com.project.queue_service.dto.QueueUpdatedEvent;
 import com.project.queue_service.model.QueueTicket;
 import com.project.queue_service.model.TicketStatus;
 import com.project.queue_service.repository.QueueTicketRepo;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -17,12 +16,17 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
-@Slf4j
 public class QueueTimeoutScheduler {
+
+    private static final Logger log = LoggerFactory.getLogger(QueueTimeoutScheduler.class);
 
     private final QueueTicketRepo queueTicketRepo;
     private final ApplicationEventPublisher appEventPublisher;
+
+    public QueueTimeoutScheduler(QueueTicketRepo queueTicketRepo, ApplicationEventPublisher appEventPublisher) {
+        this.queueTicketRepo = queueTicketRepo;
+        this.appEventPublisher = appEventPublisher;
+    }
     // ⏱️ يشتغل كل دقيقة
     @Scheduled(fixedRate = 60000)
     public void checkTimeouts() {

@@ -10,7 +10,6 @@ import com.project.queue_service.model.TicketStatus;
 import com.project.queue_service.service.QueueManager;
 import com.project.queue_service.service.TellerSessionService;
 
-import lombok.RequiredArgsConstructor;
 import java.time.LocalDate;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -22,11 +21,15 @@ import org.springframework.security.oauth2.jwt.Jwt;
 
 @RestController
 @RequestMapping("/api/queues")
-@RequiredArgsConstructor
 public class QueueController {
 
         private final QueueManager queueManager;
         private final TellerSessionService tellerSessionService;
+
+        public QueueController(QueueManager queueManager, TellerSessionService tellerSessionService) {
+                this.queueManager = queueManager;
+                this.tellerSessionService = tellerSessionService;
+        }
 
         // ================= ISSUE TICKET =================
         @PreAuthorize("hasAnyRole('RECEPTIONIST','ADMIN')")
@@ -87,11 +90,12 @@ public class QueueController {
         ResponseEntity<QueueTicketResponse> updateStatus(
                         @PathVariable Long ticketId,
                         @RequestParam String queueType,
-                        @RequestParam String status) {
+                        @RequestParam String status,
+                        @RequestParam(required = false) String productionLine) {
 
                 TicketStatus statusE = TicketStatus.valueOf(status.toUpperCase());
                 QueueType queueTypeE = QueueType.valueOf(queueType.toUpperCase());
-                QueueTicket updated = queueManager.updateTicketStatus(queueTypeE, ticketId, null, statusE);
+                QueueTicket updated = queueManager.updateTicketStatus(queueTypeE, ticketId, null, statusE, productionLine);
 
                 return ResponseEntity.ok(
                                 QueueTicketMapper.mapToResponse(updated));
@@ -102,11 +106,12 @@ public class QueueController {
                         @RequestParam(required = false) Long ticketId,
                         @RequestParam(required = false) Long orderId,
                         @RequestParam String queueType,
-                        @RequestParam String status) {
+                        @RequestParam String status,
+                        @RequestParam(required = false) String productionLine) {
 
                 TicketStatus statusE = TicketStatus.valueOf(status.toUpperCase());
                 QueueType queueTypeE = QueueType.valueOf(queueType.toUpperCase());
-                QueueTicket updated = queueManager.updateTicketStatus(queueTypeE, ticketId, orderId, statusE);
+                QueueTicket updated = queueManager.updateTicketStatus(queueTypeE, ticketId, orderId, statusE, productionLine);
 
                 return ResponseEntity.ok(
                                 QueueTicketMapper.mapToResponse(updated));

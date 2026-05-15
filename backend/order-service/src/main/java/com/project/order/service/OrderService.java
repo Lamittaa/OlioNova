@@ -33,6 +33,9 @@ import java.util.Set;
 @Transactional
 public class OrderService {
 
+    private static final String MEMBER_OLIVE_PRODUCT = "زيتون للمساهم";
+    private static final String STANDARD_OLIVE_PRODUCT = "زيتون لغير المساهم";
+
     private final OrderRepo          orderRepo;
     private final ProductLookupRepo  productRepo;
     private final OrderStatusRepo    statusRepo;
@@ -89,7 +92,7 @@ public class OrderService {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Order not found with id: " + id));
 
-        boolean isMember = fetchMembership(order.getCustomerId());
+        boolean isMember = fetchMembershipForRead(order.getCustomerId());
 
         return buildOrderResponse(order, isMember);
     }
@@ -100,7 +103,7 @@ public class OrderService {
     @Transactional(readOnly = true)
     public List<OrderResponse> getOrdersByCustomer(Long customerId) {
 
-        boolean isMember = fetchMembership(customerId);
+        boolean isMember = fetchMembershipForRead(customerId);
 
         return orderRepo.findByCustomerId(customerId)
                 .stream()
@@ -130,7 +133,7 @@ public class OrderService {
                     "Customer service is currently unavailable");
         }
 
-        boolean isMember = fetchMembership(customerId);
+        boolean isMember = fetchMembershipForRead(customerId);
 
         return orderRepo.findByCustomerId(customerId)
                 .stream()
@@ -242,7 +245,7 @@ public class OrderService {
                                         "Invalid productId: "
                                         + item.getProductId()));
 
-        if ("PURCHASE".equalsIgnoreCase(product.getProductType())) {
+        if (isStockTrackedPurchase(product)) {
 
             // ✅ شيك على المخزون لكل PURCHASE
             if (product.getInventoryAvailabilityQuantity() == null
@@ -269,7 +272,7 @@ public class OrderService {
             }
 
         }
-        else {
+        else if (isOliveProduct(product)) {
             // SERVICE
             if (item.getOliveType() == null
                     || item.getBagsCount() == null) {
@@ -282,8 +285,12 @@ public class OrderService {
 
             if (!oliveServices.add(key)) {
                 throw new InvalidOrderItemsException(
-                        "Duplicate service with same oliveType");
+                    "Duplicate service with same oliveType");
             }
+        }
+        else if (!purchaseProducts.add(product.getId())) {
+            throw new InvalidOrderItemsException(
+                    "Duplicate purchase product");
         }
     }
 }
@@ -301,12 +308,29 @@ public class OrderService {
 
     private BigDecimal computePrice(ProductLookup product,
                                      boolean isMember) {
-        if (!isMember || product.getMemberDiscount() == null) {
-            return product.getPrice();
+        return product.getPrice();
+    }
+
+    private ProductLookup resolveCustomerPricedProduct(ProductLookup product,
+                                                       boolean isMember) {
+        if (!isOliveProduct(product)) {
+            return product;
         }
-        return product.getPrice()
-                .multiply(BigDecimal.ONE.subtract(
-                        product.getMemberDiscount()));
+
+        String productName = isMember ? MEMBER_OLIVE_PRODUCT : STANDARD_OLIVE_PRODUCT;
+        return productRepo.findByProductNameIgnoreCaseAndActiveTrue(productName)
+                .orElse(product);
+    }
+
+    private boolean isOliveProduct(ProductLookup product) {
+        return product.getProductType() != null
+                && ("OLIVE".equalsIgnoreCase(product.getProductType())
+                || "SERVICE".equalsIgnoreCase(product.getProductType()));
+    }
+
+    private boolean isStockTrackedPurchase(ProductLookup product) {
+        return product.getProductType() != null
+                && "PURCHASE".equalsIgnoreCase(product.getProductType());
     }
 
     private OrderStatus getStatus(String status) {
@@ -331,6 +355,19 @@ public class OrderService {
         }
     }
 
+    private boolean fetchMembershipForRead(Long customerId) {
+        try {
+            return fetchMembership(customerId);
+        }
+        catch (ResourceNotFoundException e) {
+            throw e;
+        }
+        catch (RuntimeException e) {
+            log.warn("Could not load membership for customer {} while building read response. Falling back to non-member.", customerId);
+            return false;
+        }
+    }
+
     private OrderItem buildItem(Order order,
                                  CreateOrderItemRequest dto,
                                  boolean isMember) {
@@ -340,6 +377,7 @@ public class OrderService {
                         .orElseThrow(() ->
                                 new ResourceNotFoundException(
                                         "Product not found"));
+        product = resolveCustomerPricedProduct(product, isMember);
 
         OrderItem item = new OrderItem();
         item.setOrder(order);

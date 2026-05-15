@@ -1,0 +1,93 @@
+/* Professional modern toast styles */
+:root{
+  --toast-z: 9999;
+  --toast-radius: 12px;
+  --toast-padding: 14px 16px;
+  --toast-width-min: 320px;
+  --toast-width-max: 440px;
+  --toast-gap: 12px;
+}
+
+.toast-viewport{
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--toast-gap);
+  z-index: var(--toast-z);
+  align-items: flex-end;
+  pointer-events: none; /* allow clicks through empty area */
+}
+
+.toast-card{
+  pointer-events: auto;
+  position: relative;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: var(--toast-padding);
+  border-radius: var(--toast-radius);
+  min-width: var(--toast-width-min);
+  max-width: var(--toast-width-max);
+  box-shadow: 0 10px 30px rgba(2,6,23,0.45);
+  color: #eef2ff;
+  border: 1px solid rgba(255,255,255,0.04);
+  transform-origin: right top;
+  overflow: hidden;
+}
+
+.toast-card .icon{
+  flex: 0 0 24px;
+  display:flex; align-items:center; justify-content:center;
+}
+
+.toast-card .content{
+  flex: 1 1 auto;
+}
+
+.toast-card .title{
+  font-weight: 600; font-size: 14px; margin-bottom: 4px;
+}
+.toast-card .detail{
+  font-size: 13px; opacity: 0.95; line-height: 1.35;
+}
+
+.toast-card .actions{
+  margin-left: 8px;
+  display:flex; align-items:flex-start; gap:8px;
+}
+
+.toast-dismiss{
+  background: transparent; border: none; color: inherit; padding: 6px; cursor: pointer; border-radius:6px;
+}
+.toast-dismiss:focus{ outline: 2px solid rgba(255,255,255,0.12); }
+
+/* Tone styles - aligned with the app palette */
+.toast-neutral{ background: linear-gradient(180deg, rgba(246,242,232,0.98), rgba(239,233,219,0.98)); border-color: rgba(109,91,66,0.14); color:#2f2417 }
+.toast-success{ background: linear-gradient(180deg, rgba(224,239,229,0.98), rgba(214,232,222,0.98)); border-color: rgba(35,105,74,0.18); color:#214534 }
+.toast-danger{ background: linear-gradient(180deg, rgba(246,223,218,0.98), rgba(242,212,206,0.98)); border-color: rgba(157,61,47,0.18); color:#5d2820 }
+
+/* Progress bar using linear gradient animation via CSS variable */
+.toast-timer{
+  position: absolute;
+  left: 0; right: 0; bottom: 0; height: 4px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.18), rgba(255,255,255,0.06));
+  transform-origin: left center;
+}
+
+@keyframes toastProgress { from { transform: scaleX(1) } to { transform: scaleX(0) } }
+
+/* Animated enter */
+.toast-enter{ animation: toastEnter .18s cubic-bezier(.2,.9,.2,1) both; }
+@keyframes toastEnter{ from { transform: translateY(-8px) scale(.985); opacity: 0 } to { transform: translateY(0) scale(1); opacity: 1 } }
+
+/* Animated exit (applied before removal) */
+.toast-exit{ animation: toastExit .18s ease-in both; }
+@keyframes toastExit{ from { transform: translateY(0) scale(1); opacity: 1 } to { transform: translateY(-6px) scale(.99); opacity: 0 } }
+
+/* Small responsive tweak */
+@media (max-width:480px){
+  .toast-viewport{ left: 12px; right: 12px; top: 12px; align-items: center }
+  .toast-card{ width: calc(100% - 24px); max-width: none }
+}

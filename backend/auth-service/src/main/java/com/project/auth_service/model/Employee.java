@@ -5,8 +5,7 @@ import lombok.*;
 
 @Entity
 @Table(name = "employee", uniqueConstraints = {
-        @UniqueConstraint(columnNames = "national_id"),
-        @UniqueConstraint(columnNames = "email")
+        @UniqueConstraint(columnNames = "national_id")
 })
 @Getter
 @Setter
@@ -34,6 +33,9 @@ public class Employee {
 
     @Column(nullable = false, length = 100)
     private String email;
+
+    @Column(length = 80)
+    private String city;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 10)

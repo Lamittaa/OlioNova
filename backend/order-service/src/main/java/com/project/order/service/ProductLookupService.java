@@ -37,7 +37,7 @@ public class ProductLookupService {
     ProductLookup product = productMapper.toEntity(request);
 
     product.setProductName(name);
-    product.setProductType("PURCHASE");
+    product.setProductType(normalizeProductType(request.getProductType()));
     product.setUnit(request.getUnit().trim().toUpperCase());
     product.setActive(true);
 
@@ -88,6 +88,10 @@ public class ProductLookupService {
         product.setPrice(request.getPrice());
     }
 
+    if (request.getProductType() != null && !request.getProductType().isBlank()) {
+        product.setProductType(normalizeProductType(request.getProductType()));
+    }
+
     // 🟢 الوحدة
     if (request.getUnit() != null && !request.getUnit().isBlank()) {
         product.setUnit(request.getUnit().trim().toUpperCase());
@@ -118,6 +122,13 @@ public class ProductLookupService {
     ProductLookup saved = productRepo.save(product);
     return productMapper.toProductResponse(saved);
 }
+
+    private String normalizeProductType(String productType) {
+        if (productType == null || productType.isBlank()) {
+            return "PURCHASE";
+        }
+        return productType.trim().toUpperCase();
+    }
 
     public ProductResponse updateInventory(Long id, UpdateInventoryRequest request) {
     ProductLookup product = productRepo.findByIdAndActiveTrue(id)

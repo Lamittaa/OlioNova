@@ -31,7 +31,7 @@ public class OrderController {
         private final OrderService orderService;
 
         @PostMapping
-        @PreAuthorize("hasAnyRole('ADMIN','RECEPTIONIST')")
+        @PreAuthorize("hasAnyRole('ADMIN','RECEPTIONIST','ACCOUNTANT')")
         public ResponseEntity<OrderResponse> createOrder(
                         @Valid @RequestBody CreateOrderRequest request) {
                 return ResponseEntity
@@ -40,7 +40,7 @@ public class OrderController {
         }
 
         @GetMapping("/{id}")
-        @PreAuthorize("hasAuthority('ORDER_READ')")
+        @PreAuthorize("hasAuthority('ORDER_READ') or hasRole('TECHNICIAN')")
         public ResponseEntity<OrderResponse> getOrderById(
                         @PathVariable @Min(1) Long id) {
                 return ResponseEntity.ok(orderService.getOrderById(id));
@@ -85,7 +85,7 @@ public class OrderController {
         }
 
         @PostMapping("/{id}/pay")
-@PreAuthorize("hasRole('ADMIN') ")
+@PreAuthorize("hasAnyRole('ADMIN','ACCOUNTANT')")
 public ResponseEntity<Void> payOrder(
         @PathVariable @Min(1) Long id) {
     orderService.payOrder(id);

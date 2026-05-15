@@ -18,6 +18,8 @@ public class UpdateProfileRequest {
     @Email
     private String email;
 
+    private String city;
+
     @Pattern(regexp = "SINGLE|MARRIED|DIVORCED|WIDOWED")
     private String maritalStatus;
 }

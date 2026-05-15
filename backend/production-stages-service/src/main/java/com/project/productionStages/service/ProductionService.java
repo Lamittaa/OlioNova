@@ -157,29 +157,18 @@ public class ProductionService {
         Long orderItemId = request.getOrderItemId();
         Long orderId = request.getOrderId();
 
-        // ✅ Already started
         if (stageRepository.existsByOrderItemId(orderItemId)) {
             throw new BusinessRuleException("Already in production", "ALREADY_STARTED");
         }
 
-        // ✅ parse stageType
-        StageType stageType;
-        try {
-            stageType = StageType.valueOf(request.getStageType().toUpperCase());
-        } catch (Exception e) {
-            throw new BusinessRuleException("Invalid stage type", "INVALID_STAGE");
-        }
+        StageType stageType = resolveStageType(request.getStageType());
+        String line = resolveLine(request.getLine());
+        String container = resolveContainer(line, stageType, request.getContainer());
 
-        // ✅ جيب stage حسب اختيار الفني
         ProductionStage stage = stageRepository
-                .findByLineAndStageTypeAndContainer(
-                        request.getLine(),
-                        stageType,
-                        request.getContainer() // 🔥 من الفرونت
-                )
+                .findByLineAndStageTypeAndContainer(line, stageType, container)
                 .orElseThrow(() -> new ResourceNotFoundException("Stage not found"));
 
-        // 🔥 أهم تحقق
         if (stage.getCurrentStatus() != StageStatus.EMPTY) {
             throw new BusinessRuleException(
                     "Container is already in use",
@@ -187,7 +176,6 @@ public class ProductionService {
             );
         }
 
-        // ✅ assign
         stage.setOrderItemId(orderItemId);
         stage.setOrderId(orderId);
         stage.setCurrentStatus(StageStatus.IN_PROGRESS);
@@ -197,6 +185,39 @@ public class ProductionService {
         orderClient.updateOrderStatus(orderId, Map.of("status", "IN_PROGRESS"));
         orderClient.updateOrderItemStatus(orderItemId, Map.of("status", "IN_PROGRESS"));
         queueClient.updateStatusByOrderId(orderId, "PRODUCTION", "SERVING");
+    }
+
+    private StageType resolveStageType(String requestedStageType) {
+        if (requestedStageType == null || requestedStageType.isBlank()) {
+            return StageType.CLEANING;
+        }
+
+        try {
+            return StageType.valueOf(requestedStageType.toUpperCase());
+        } catch (Exception e) {
+            throw new BusinessRuleException("Invalid stage type", "INVALID_STAGE");
+        }
+    }
+
+    private String resolveLine(String requestedLine) {
+        if (requestedLine != null && !requestedLine.isBlank()) {
+            return requestedLine.trim();
+        }
+
+        return stageRepository.findAvailableLines().stream()
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("No production line is currently available"));
+    }
+
+    private String resolveContainer(String line, StageType stageType, String requestedContainer) {
+        if (requestedContainer != null && !requestedContainer.isBlank()) {
+            return requestedContainer.trim();
+        }
+
+        return stageRepository.findByStageTypeAndLineAndCurrentStatus(stageType, line, StageStatus.EMPTY).stream()
+                .map(ProductionStage::getContainer)
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("No empty container is available for the selected stage"));
     }
 
     public List<StageGroupResponse> getStagesByLine(String line) {
@@ -340,3 +361,4 @@ public class ProductionService {
     }
 
 }
+

@@ -3,7 +3,6 @@ package com.project.queue_service.service;
 import com.project.queue_service.model.QueueCounter;
 import com.project.queue_service.model.QueueType;
 import com.project.queue_service.repository.QueueCounterRepo;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -11,10 +10,13 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 
 @Service
-@RequiredArgsConstructor
 class QueueCounterCreator {
 
     private final QueueCounterRepo queueCounterRepo;
+
+    public QueueCounterCreator(QueueCounterRepo queueCounterRepo) {
+        this.queueCounterRepo = queueCounterRepo;
+    }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public QueueCounter createCounterRow(QueueType queueType, LocalDate day) {

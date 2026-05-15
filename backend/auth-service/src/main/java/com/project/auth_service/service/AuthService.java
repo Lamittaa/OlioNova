@@ -174,7 +174,7 @@ public void forgotPassword(String usernameOrEmail) {
         user = userOpt.get();
     } else {
         // إذا مش username → اعتبره email
-        Employee employee = employeeRepo.findByEmail(usernameOrEmail)
+        Employee employee = employeeRepo.findFirstByEmailOrderByIdAsc(usernameOrEmail)
                 .orElseThrow(() -> new UserNotFoundException(
                         "User not found with username or email: " + usernameOrEmail));
 
@@ -224,7 +224,7 @@ public String verifyOtp(String usernameOrEmail, String otp) {
         user = userOpt.get();
     } else {
         // إذا Email
-        Employee employee = employeeRepo.findByEmail(usernameOrEmail)
+        Employee employee = employeeRepo.findFirstByEmailOrderByIdAsc(usernameOrEmail)
                 .orElseThrow(() -> new UserNotFoundException(
                         "User not found with username or email: " + usernameOrEmail));
 

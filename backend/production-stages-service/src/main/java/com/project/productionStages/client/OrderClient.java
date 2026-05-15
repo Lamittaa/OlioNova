@@ -29,6 +29,9 @@ public interface OrderClient {
             @RequestBody List<Long> ids
     );
 
+    @GetMapping("/api/orders/{orderId}")
+    OrderResponse getOrderById(@PathVariable("orderId") Long orderId);
+
     default List<OrdersDashboardDto> getOrdersByIdsForProd(List<Long> ids) {
 
         var orders = getOrdersByIds(ids);

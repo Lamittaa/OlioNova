@@ -1,5 +1,6 @@
 package com.project.productionStages.dto;
 
+import java.math.BigDecimal;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -15,4 +16,5 @@ OrderItemStatusResponse {
     private Long id;
     private String status;
     private String productType;
+    private BigDecimal quantity;
 }

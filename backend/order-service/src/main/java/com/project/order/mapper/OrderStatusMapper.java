@@ -4,17 +4,35 @@ package com.project.order.mapper;
 import com.project.order.dto.CreateOrderStatusResponse;
 import com.project.order.dto.OrderStatusResponse;
 import com.project.order.model.OrderStatus;
-import org.mapstruct.Mapper;
 import org.mapstruct.MappingTarget;
+import org.springframework.stereotype.Component;
 
-@Mapper(componentModel = "spring")
-public interface OrderStatusMapper {
+@Component
+public class OrderStatusMapper {
 
-    CreateOrderStatusResponse toCreateOrderStatusResponse(OrderStatus entity);
+    public CreateOrderStatusResponse toCreateOrderStatusResponse(OrderStatus entity) {
+        if (entity == null) {
+            return null;
+        }
 
-    OrderStatusResponse toOrderStatusResponse(OrderStatus entity);
+        CreateOrderStatusResponse response = new CreateOrderStatusResponse();
+        response.setId(entity.getId());
+        response.setStatusName(entity.getStatusName());
+        return response;
+    }
 
-    default void updateOrderStatusFromDto(String statusName, @MappingTarget OrderStatus entity) {
+    public OrderStatusResponse toOrderStatusResponse(OrderStatus entity) {
+        if (entity == null) {
+            return null;
+        }
+
+        OrderStatusResponse response = new OrderStatusResponse();
+        response.setId(entity.getId());
+        response.setStatusName(entity.getStatusName());
+        return response;
+    }
+
+    public void updateOrderStatusFromDto(String statusName, @MappingTarget OrderStatus entity) {
         if (statusName != null) {
             entity.setStatusName(statusName.trim());
         }

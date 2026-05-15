@@ -49,6 +49,15 @@ public class EmployeeController {
                 employeeService.getEmployeeById(id));
     }
 
+    @PatchMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public EmployeeResponse update(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateEmployeeRequest req) {
+        Employee updated = employeeService.updateEmployee(id, req);
+        return employeeMapper.toResponse(updated);
+    }
+
     @PatchMapping("/profile")
     @PreAuthorize("hasAuthority('VIEW_PROFILE')")
     public ProfileResponse updateMyProfile(

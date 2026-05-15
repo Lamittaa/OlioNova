@@ -3,8 +3,8 @@ package com.project.queue_service.service;
 import com.project.queue_service.model.QueueCounter;
 import com.project.queue_service.model.QueueType;
 import com.project.queue_service.repository.QueueCounterRepo;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,12 +12,17 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 
 @Service
-@RequiredArgsConstructor
-@Slf4j
 public class QueueCounterService {
+
+    private static final Logger log = LoggerFactory.getLogger(QueueCounterService.class);
 
     private final QueueCounterRepo queueCounterRepo;
     private final QueueCounterCreator queueCounterCreator;
+
+    public QueueCounterService(QueueCounterRepo queueCounterRepo, QueueCounterCreator queueCounterCreator) {
+        this.queueCounterRepo = queueCounterRepo;
+        this.queueCounterCreator = queueCounterCreator;
+    }
 
     @Transactional
     public Integer getAndIncrementTicketNumber(QueueType queueType) {

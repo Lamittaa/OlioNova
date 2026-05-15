@@ -9,9 +9,11 @@ public static QueueTicketResponse mapToResponse(QueueTicket t) {
 
     QueueTicketResponse dto = new QueueTicketResponse();
 
+    dto.setTicketId(t.getId());
     dto.setOrderId(t.getOrderId());
     dto.setTicketNumber(t.getTicketNumber());
     dto.setTicketStatus(t.getTicketStatus().name());
+    dto.setProductionLine(t.getProductionLine());
 
     return dto;
 }

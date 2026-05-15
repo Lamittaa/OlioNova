@@ -21,122 +21,37 @@ public class ProductionStageSeeder implements CommandLineRunner {
 
             List<ProductionStage> stages = List.of(
 
-                    ProductionStage.builder()
-                            .name("Cleaning Stage")
-                            .stageType(StageType.CLEANING)
-                            .line("A")
-                            .stageOrder(1)
-                            .currentStatus(StageStatus.EMPTY)
-                            .build(),
-
-                    ProductionStage.builder()
-                            .name("Washing Stage")
-                            .stageType(StageType.WASHING)
-                            .line("A")
-                            .stageOrder(2)
-                            .currentStatus(StageStatus.EMPTY)
-                            .build(),
-
-                    ProductionStage.builder()
-                            .name("Crushing Stage")
-                            .stageType(StageType.CRUSHING)
-                            .line("A")
-                            .stageOrder(3)
-                            .currentStatus(StageStatus.EMPTY)
-                            .build(),
-
-                    ProductionStage.builder()
-                            .name("Malaxation Stage")
-                            .stageType(StageType.MALAXATION)
-                            .line("A")
-                            .stageOrder(4)
-                            .currentStatus(StageStatus.EMPTY)
-                            .build(),
-
-                    ProductionStage.builder()
-                            .name("Extraction Stage")
-                            .stageType(StageType.EXTRACTION)
-                            .line("A")
-                            .stageOrder(5)
-                            .currentStatus(StageStatus.EMPTY)
-                            .build(),
-
-                    ProductionStage.builder()
-                            .name("Separation Stage")
-                            .stageType(StageType.SEPARATION)
-                            .line("A")
-                            .stageOrder(6)
-                            .currentStatus(StageStatus.EMPTY)
-                            .build(),
-
-                    ProductionStage.builder()
-                            .name("Storage Stage")
-                            .stageType(StageType.STORAGE)
-                            .line("A")
-                            .stageOrder(7)
-                            .currentStatus(StageStatus.EMPTY)
-                            .build(),
+                    stage("Cleaning Stage", StageType.CLEANING, "A", 1, "A-CLEANING-1"),
+                    stage("Washing Stage", StageType.WASHING, "A", 2, "A-WASHING-1"),
+                    stage("Crushing Stage", StageType.CRUSHING, "A", 3, "A-CRUSHING-1"),
+                    stage("Malaxation Stage", StageType.MALAXATION, "A", 4, "A-MALAXATION-1"),
+                    stage("Extraction Stage", StageType.EXTRACTION, "A", 5, "A-EXTRACTION-1"),
+                    stage("Separation Stage", StageType.SEPARATION, "A", 6, "A-SEPARATION-1"),
+                    stage("Storage Stage", StageType.STORAGE, "A", 7, "A-STORAGE-1"),
 
                     // ===== Line B =====
 
-                    ProductionStage.builder()
-                            .name("Cleaning Stage")
-                            .stageType(StageType.CLEANING)
-                            .line("B")
-                            .stageOrder(1)
-                            .currentStatus(StageStatus.EMPTY)
-                            .build(),
-
-                    ProductionStage.builder()
-                            .name("Washing Stage")
-                            .stageType(StageType.WASHING)
-                            .line("B")
-                            .stageOrder(2)
-                            .currentStatus(StageStatus.EMPTY)
-                            .build(),
-
-                    ProductionStage.builder()
-                            .name("Crushing Stage")
-                            .stageType(StageType.CRUSHING)
-                            .line("B")
-                            .stageOrder(3)
-                            .currentStatus(StageStatus.EMPTY)
-                            .build(),
-
-                    ProductionStage.builder()
-                            .name("Malaxation Stage")
-                            .stageType(StageType.MALAXATION)
-                            .line("B")
-                            .stageOrder(4)
-                            .currentStatus(StageStatus.EMPTY)
-                            .build(),
-
-                    ProductionStage.builder()
-                            .name("Extraction Stage")
-                            .stageType(StageType.EXTRACTION)
-                            .line("B")
-                            .stageOrder(5)
-                            .currentStatus(StageStatus.EMPTY)
-                            .build(),
-
-                    ProductionStage.builder()
-                            .name("Separation Stage")
-                            .stageType(StageType.SEPARATION)
-                            .line("B")
-                            .stageOrder(6)
-                            .currentStatus(StageStatus.EMPTY)
-                            .build(),
-
-                    ProductionStage.builder()
-                            .name("Storage Stage")
-                            .stageType(StageType.STORAGE)
-                            .line("B")
-                            .stageOrder(7)
-                            .currentStatus(StageStatus.EMPTY)
-                            .build()
+                    stage("Cleaning Stage", StageType.CLEANING, "B", 1, "B-CLEANING-1"),
+                    stage("Washing Stage", StageType.WASHING, "B", 2, "B-WASHING-1"),
+                    stage("Crushing Stage", StageType.CRUSHING, "B", 3, "B-CRUSHING-1"),
+                    stage("Malaxation Stage", StageType.MALAXATION, "B", 4, "B-MALAXATION-1"),
+                    stage("Extraction Stage", StageType.EXTRACTION, "B", 5, "B-EXTRACTION-1"),
+                    stage("Separation Stage", StageType.SEPARATION, "B", 6, "B-SEPARATION-1"),
+                    stage("Storage Stage", StageType.STORAGE, "B", 7, "B-STORAGE-1")
             );
 
             repository.saveAll(stages);
         }
+    }
+
+    private ProductionStage stage(String name, StageType stageType, String line, int stageOrder, String container) {
+        return ProductionStage.builder()
+                .name(name)
+                .stageType(stageType)
+                .line(line)
+                .stageOrder(stageOrder)
+                .currentStatus(StageStatus.EMPTY)
+                .container(container)
+                .build();
     }
 }

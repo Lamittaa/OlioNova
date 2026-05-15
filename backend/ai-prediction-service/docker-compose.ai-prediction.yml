@@ -1,0 +1,36 @@
+services:
+  ai-db:
+    image: postgres:16-alpine
+    container_name: ai-db
+    environment:
+      POSTGRES_DB: aidb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5438:5432"
+    volumes:
+      - ai_db_data:/var/lib/postgresql/data
+
+  ai-prediction-service:
+    build:
+      context: ./ai-prediction-service
+    environment:
+      SERVER_PORT: 8082
+      SPRING_DATASOURCE_URL: jdbc:postgresql://ai-db:5432/aidb
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      EUREKA_CLIENT_ENABLED: "false"
+      SPRING_CLOUD_CONFIG_ENABLED: "false"
+      AI_STORAGE_ROOT: /data/ai-prediction
+      SECURITY_API_KEY_INTERNAL: change-me-internal
+      SECURITY_API_KEY_ADMIN: change-me-admin
+    ports:
+      - "8082:8082"
+    depends_on:
+      - ai-db
+    volumes:
+      - ai_prediction_data:/data/ai-prediction
+
+volumes:
+  ai_db_data:
+  ai_prediction_data:

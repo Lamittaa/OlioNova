@@ -3,6 +3,7 @@ package com.project.productionStages.config;
 import feign.RequestInterceptor;
 import feign.RequestTemplate;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.context.request.RequestAttributes;
@@ -13,7 +14,8 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 public class FeignAuthForwardConfig {
 
     @Bean
-    public RequestInterceptor requestInterceptor() {
+    public RequestInterceptor requestInterceptor(
+            @Value("${security.api-key.internal:internal-dev-key}") String internalApiKey) {
 
         return new RequestInterceptor() {
 
@@ -33,6 +35,9 @@ public class FeignAuthForwardConfig {
                 if (authorization != null && !authorization.isEmpty()) {
                     template.header("Authorization", authorization);
                 }
+
+                String apiKey = request.getHeader("X-API-Key");
+                template.header("X-API-Key", apiKey != null && !apiKey.isBlank() ? apiKey : internalApiKey);
             }
         };
     }

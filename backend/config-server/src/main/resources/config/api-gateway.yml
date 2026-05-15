@@ -38,12 +38,12 @@ spring:
         - id: productionStages-api
           uri: lb://PRODUCTIONSTAGES-SERVICE
           predicates:
-            - Path=/api/production-stages/**,/api/stage-types/**
+            - Path=/api/production/**,/api/production-stages/**,/api/stage-types/**
 
         - id: queue-api
           uri: lb://QUEUE-SERVICE
           predicates:
-            - Path=/api/queue/**,/api/queues/**
+            - Path=/api/queue/**,/api/queues/**,/api/public/queues/**
 
         - id: queue-websocket
           uri: lb:ws://QUEUE-SERVICE
@@ -53,7 +53,12 @@ spring:
         - id: tracking-api
           uri: lb://TRACKING-SERVICE
           predicates:
-            - Path=/api/tracking/**,/api/tracking-reports/**
+            - Path=/api/tracking/**,/api/public/tracking/**,/api/tracking-reports/**
+
+        - id: ai-prediction-api
+          uri: lb://AI-PREDICTION-SERVICE
+          predicates:
+            - Path=/api/v1/**
         
 
 security:
