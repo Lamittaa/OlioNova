@@ -9,7 +9,10 @@ import "./styles/global.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <BrowserRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+    <BrowserRouter
+      basename={import.meta.env.BASE_URL.replace(/\/$/, "") || undefined}
+      future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
+    >
       <I18nProvider>
         <AuthProvider>
           <ToastProvider>

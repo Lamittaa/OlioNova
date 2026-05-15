@@ -5,3 +5,6 @@ node_modules/
 *.log
 hs_err_pid*.log
 replay_pid*.log
+*.tsbuildinfo
+frontend/vite.config.js
+frontend/vite.config.d.ts
