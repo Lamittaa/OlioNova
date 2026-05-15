@@ -38,6 +38,8 @@ jobs:
         run: npm run build
         env:
           GITHUB_PAGES: "true"
+          VITE_API_BASE_URL: "https://ab8f-84-242-56-27.ngrok-free.app"
+          VITE_TRACKING_BASE_URL: "https://d21c-84-242-56-27.ngrok-free.app"
 
       - name: Add SPA fallback
         run: cp dist/index.html dist/404.html
