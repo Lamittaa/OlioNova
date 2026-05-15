@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { useI18n } from "../app/i18n-context";
 import { useToastHelpers } from "../app/toast-context";
 import { endpoints } from "../lib/endpoints";
+import { publicAsset } from "../lib/assets";
 import { apiRequest } from "../lib/http";
 import { useActionState } from "../lib/use-action-state";
 import { getApiErrorMessage } from "../lib/validation";
@@ -614,7 +615,7 @@ export function CustomerTrackingPage(): JSX.Element {
           </section>
         ) : (
           <section className="customer-track-empty-state">
-            <img alt="" src="/app-icon.png" />
+            <img alt="" src={publicAsset("app-icon.png")} />
             <div>
               <strong>{copy.emptyTitle}</strong>
               <span>{copy.emptyText}</span>
@@ -624,7 +625,7 @@ export function CustomerTrackingPage(): JSX.Element {
 
         <section className="customer-track-about" aria-labelledby="customer-track-about-title">
           <div className="customer-track-about-heading">
-            <img alt="" src="/app-icon.png" />
+            <img alt="" src={publicAsset("app-icon.png")} />
             <span>{aboutCopy.label}</span>
           </div>
 

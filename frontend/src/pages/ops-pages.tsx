@@ -6,6 +6,7 @@ import { useToastHelpers } from "../app/toast-context";
 import { canAction } from "../app/policy";
 import { ActionButton, ErrorSummary, FieldError, PermissionNote } from "../components/form-ui";
 import { Banner, Card, EmptyState, PageHeader, StatusBadge } from "../components/ui";
+import { publicAsset } from "../lib/assets";
 import { endpoints } from "../lib/endpoints";
 import { apiRequest } from "../lib/http";
 import { fetchProductionDashboard, fetchProductionPipeline } from "../lib/production-api";
@@ -377,7 +378,7 @@ async function printInvoiceReceipt({
   const printedTotal = invoiceTotal > 0 ? invoiceTotal : payment.totalPrice;
   const trackingCode = tracking?.trackingCode ?? "";
   const trackingUrl = trackingCode ? `${window.location.origin}/track?code=${encodeURIComponent(trackingCode)}` : "";
-  const logoUrl = `${window.location.origin}/press-logo-full.jpeg`;
+  const logoUrl = new URL(publicAsset("press-logo-full.jpeg"), window.location.origin).toString();
   const qrMarkup = trackingUrl
     ? await QRCode.toString(trackingUrl, {
         errorCorrectionLevel: "M",
@@ -1970,7 +1971,7 @@ export function PaymentsPage(): JSX.Element {
               </div>
               <div class="header-center">
                 <div class="header-logo-frame">
-                  <img alt="Press logo" src="/press-logo-badge.png" />
+                  <img alt="Press logo" src="${new URL(publicAsset("press-logo-badge.png"), window.location.origin).toString()}" />
                 </div>
                 <div class="mark">الجمعية التعاونية لعصر الزيتون</div>
               </div>

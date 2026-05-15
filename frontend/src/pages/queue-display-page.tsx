@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useI18n } from "../app/i18n-context";
 import { endpoints } from "../lib/endpoints";
+import { publicAsset } from "../lib/assets";
 import { apiRequest } from "../lib/http";
 import type { PublicQueueDisplay, QueueType } from "../types/models";
 
@@ -219,7 +220,7 @@ export function QueueDisplayPage(): JSX.Element {
       <section className="queue-display-frame" aria-live="polite">
         <header className="queue-display-header">
           <div className="queue-display-brand">
-            <img alt="" src="/opslogo.jpeg" />
+            <img alt="" src={publicAsset("opslogo.jpeg")} />
             <span>{copy.live}</span>
           </div>
           <div className="queue-display-title">

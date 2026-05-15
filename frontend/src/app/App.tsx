@@ -10,6 +10,7 @@ import { CustomerTrackingPage } from "../pages/customer-tracking-page";
 import { InvoicePage, ProductionPage, QueueControlPage, QueuePage, ReportsPage } from "../pages/ops-pages";
 import { QueueDisplayPage } from "../pages/queue-display-page";
 import { ReceptionPage } from "../pages/reception-page";
+import { publicAsset } from "../lib/assets";
 import type { PageKey } from "../types/models";
 import { useAuth } from "./auth-context";
 import { useI18n } from "./i18n-context";
@@ -153,7 +154,7 @@ function AppLayout(): JSX.Element {
           </button>
           <div className="shell-user-badge">
             <div className="shell-user-avatar" aria-hidden="true">
-              <img alt="" src="/app-icon.png" />
+              <img alt="" src={publicAsset("app-icon.png")} />
             </div>
             <div className="shell-user-copy">
               <strong className="shell-user-name">

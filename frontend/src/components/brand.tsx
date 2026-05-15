@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useI18n } from "../app/i18n-context";
+import { publicAsset } from "../lib/assets";
 import { cx } from "../lib/utils";
 
 type BrandSize = "sm" | "md" | "hero";
@@ -18,8 +19,8 @@ export function BrandMark(props: {
   const variant = props.variant ?? "logo";
   const [assetMode, setAssetMode] = useState<"press" | "brand" | "fallback">("press");
 
-  const pressSrc = variant === "emblem" ? "/press-emblem.png" : "/press-logo.png";
-  const logoSrc = assetMode === "press" ? pressSrc : "/brand-logo.png";
+  const pressSrc = variant === "emblem" ? publicAsset("press-emblem.png") : publicAsset("press-logo.png");
+  const logoSrc = assetMode === "press" ? pressSrc : publicAsset("brand-logo.png");
 
   return (
     <div

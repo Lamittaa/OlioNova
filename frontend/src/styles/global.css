@@ -1828,7 +1828,7 @@ button {
 .auth-shell::before {
   background:
     linear-gradient(180deg, rgba(255, 251, 244, 0.72), rgba(245, 237, 222, 0.82)),
-    url("/login-reference-art.png");
+    url("/login-reference-background.jpeg");
   background-position: center;
   background-repeat: no-repeat;
   background-size: cover;
@@ -1848,7 +1848,7 @@ button {
 .auth-shell-login::before {
   background:
     linear-gradient(180deg, rgba(255, 250, 243, 0.18), rgba(246, 238, 223, 0.3)),
-    url("/login-reference-art.png");
+    url("/login-reference-background.jpeg");
   background-position: center;
   background-repeat: no-repeat;
   background-size: min(980px, 96vw) auto;
@@ -2036,7 +2036,7 @@ button {
   pointer-events: none;
   background:
     linear-gradient(90deg, rgba(255, 255, 255, 0.36), rgba(255, 255, 255, 0.12)),
-    url("/login-reference-art.png");
+    url("/login-reference-background.jpeg");
   background-position: center;
   background-repeat: no-repeat;
   background-size: cover;

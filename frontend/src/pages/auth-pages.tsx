@@ -6,6 +6,7 @@ import { useToastHelpers } from "../app/toast-context";
 import { ActionButton, ErrorSummary, FieldError } from "../components/form-ui";
 import { Card, PageHeader } from "../components/ui";
 import { endpoints } from "../lib/endpoints";
+import { publicAsset } from "../lib/assets";
 import { apiRequest } from "../lib/http";
 import { useActionState } from "../lib/use-action-state";
 import {
@@ -82,14 +83,14 @@ export function LoginPage(): JSX.Element {
           <AuthLanguageSwitch />
         </div>
         <div className="auth-press-badge" aria-hidden="true">
-          <img alt={t("Olive Press logo")} className="auth-press-badge-image" src="/opslogo.jpeg" />
+          <img alt={t("Olive Press logo")} className="auth-press-badge-image" src={publicAsset("opslogo.jpeg")} />
         </div>
         <div className="auth-login-card auth-login-card-modern">
           <Card>
             <div className="auth-form-shell">
               <div className="auth-form-header">
                 <div className="auth-wordmark-frame">
-                  <img alt={t("OlioNova AI")} className="auth-wordmark-logo" src="/ops-logo.jpeg" />
+                  <img alt={t("OlioNova AI")} className="auth-wordmark-logo" src={publicAsset("ops-logo.jpeg")} />
                 </div>
                 <div className="auth-form-copy">
                   <h1>{t("Sign in")}</h1>
